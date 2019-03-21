@@ -32,6 +32,9 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
         public NamedContentData DataDraft { get; set; }
 
         [DataMember]
+        public long? OrderNo { get; set; }
+
+        [DataMember]
         public ScheduleJob ScheduleJob { get; set; }
 
         [DataMember]
@@ -58,6 +61,11 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
             {
                 Data = @event.Data;
             }
+        }
+
+        protected void On(ContentOrderChanged @event)
+        {
+            OrderNo = @event.NewOrderNo;
         }
 
         protected void On(ContentUpdateProposed @event)
