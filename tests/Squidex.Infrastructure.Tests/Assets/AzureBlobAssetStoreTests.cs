@@ -7,27 +7,29 @@
 
 using Xunit;
 
-#pragma warning disable xUnit1000 // Test classes must be public
-
 namespace Squidex.Infrastructure.Assets
 {
-    internal class AzureBlobAssetStoreTests : AssetStoreTests<AzureBlobAssetStore>
+    [Trait("Category", "Dependencies")]
+    public class AzureBlobAssetStoreTests : AssetStoreTests<AzureBlobAssetStore>, IClassFixture<AzureBlobAssetStoreFixture>
     {
-        public override AzureBlobAssetStore CreateStore()
+        private readonly AzureBlobAssetStoreFixture fixture;
+
+        public AzureBlobAssetStoreTests(AzureBlobAssetStoreFixture fixture)
         {
-            return new AzureBlobAssetStore("UseDevelopmentStorage=true", "squidex-test-container");
+            this.fixture = fixture;
         }
 
-        public override void Dispose()
+        public override AzureBlobAssetStore CreateStore()
         {
+            return fixture.AssetStore;
         }
 
         [Fact]
         public void Should_calculate_source_url()
         {
-            var url = Sut.GeneratePublicUrl(AssetId, 1, null);
+            var url = Sut.GeneratePublicUrl(FileName);
 
-            Assert.Equal($"http://127.0.0.1:10000/devstoreaccount1/squidex-test-container/{AssetId}_1", url);
+            Assert.Equal($"http://127.0.0.1:10000/devstoreaccount1/squidex-test-container/{FileName}", url);
         }
     }
 }

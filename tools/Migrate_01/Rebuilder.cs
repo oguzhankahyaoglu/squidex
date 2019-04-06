@@ -44,93 +44,82 @@ namespace Migrate_01
             this.store = store;
         }
 
-        public async Task RebuildAppsAsync()
+        public Task RebuildAppsAsync(CancellationToken ct = default)
         {
-            await store.GetSnapshotStore<AppState>().ClearAsync();
-
-            await RebuildManyAsync("^app\\-", id => RebuildAsync<AppState, AppGrain>(id, (e, s) => s.Apply(e)));
+            return RebuildManyAsync<AppState, AppGrain>("^app\\-", ct);
         }
 
-        public async Task RebuildSchemasAsync()
+        public Task RebuildSchemasAsync(CancellationToken ct = default)
         {
-            await store.GetSnapshotStore<SchemaState>().ClearAsync();
-
-            await RebuildManyAsync("^schema\\-", id => RebuildAsync<SchemaState, SchemaGrain>(id, (e, s) => s.Apply(e)));
+            return RebuildManyAsync<SchemaState, SchemaGrain>("^schema\\-", ct);
         }
 
-        public async Task RebuildRulesAsync()
+        public Task RebuildRulesAsync(CancellationToken ct = default)
         {
-            await store.GetSnapshotStore<RuleState>().ClearAsync();
-
-            await RebuildManyAsync("^rule\\-", id => RebuildAsync<RuleState, RuleGrain>(id, (e, s) => s.Apply(e)));
+            return RebuildManyAsync<RuleState, RuleGrain>("^rule\\-", ct);
         }
 
-        public async Task RebuildAssetsAsync()
+        public Task RebuildAssetsAsync(CancellationToken ct = default)
         {
-            await store.GetSnapshotStore<AssetState>().ClearAsync();
-
-            await RebuildManyAsync("^asset\\-", id => RebuildAsync<AssetState, AssetGrain>(id, (e, s) => s.Apply(e)));
+            return RebuildManyAsync<AssetState, AssetGrain>("^asset\\-", ct);
         }
 
-        public async Task RebuildContentAsync()
+        public Task RebuildContentAsync(CancellationToken ct = default)
         {
-            using (localCache.StartContext())
-            {
-                await store.GetSnapshotStore<ContentState>().ClearAsync();
+            return RebuildManyAsync<ContentState, ContentGrain>("^content\\-", ct);
+        }
 
-                await RebuildManyAsync("^content\\-", async id =>
+        private async Task RebuildManyAsync<TState, TGrain>(string filter, CancellationToken ct) where TState : IDomainState<TState>, new()
+        {
+            var handledIds = new HashSet<Guid>();
+
+            var worker = new ActionBlock<Guid>(async id =>
                 {
                     try
                     {
-                        await RebuildAsync<ContentState, ContentGrain>(id, (e, s) => s.Apply(e));
+                        var state = new TState
+                        {
+                            Version = EtagVersion.Empty
+                        };
+
+                        var persistence = store.WithSnapshotsAndEventSourcing(typeof(TGrain), id, (TState s) => state = s, e =>
+                        {
+                            state = state.Apply(e);
+
+                            state.Version++;
+                        });
+
+                        await persistence.ReadAsync();
+                        await persistence.WriteSnapshotAsync(state);
                     }
                     catch (DomainObjectNotFoundException)
                     {
                         return;
                     }
-                });
-            }
-        }
-
-        private async Task RebuildManyAsync(string filter, Func<Guid, Task> action)
-        {
-            var handledIds = new HashSet<Guid>();
-
-            var worker = new ActionBlock<Guid>(action, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 32 });
-
-            await eventStore.QueryAsync(async storedEvent =>
-            {
-                var headers = storedEvent.Data.Headers;
-
-                var id = headers.AggregateId();
-
-                if (handledIds.Add(id))
+                },
+                new ExecutionDataflowBlockOptions
                 {
-                    await worker.SendAsync(id);
-                }
-            }, filter, ct: CancellationToken.None);
+                    MaxDegreeOfParallelism = Environment.ProcessorCount * 2
+                });
 
-            worker.Complete();
-
-            await worker.Completion;
-        }
-
-        private async Task RebuildAsync<TState, TGrain>(Guid key, Func<Envelope<IEvent>, TState, TState> func) where TState : IDomainState, new()
-        {
-            var state = new TState
+            using (localCache.StartContext())
             {
-                Version = EtagVersion.Empty
-            };
+                await store.GetSnapshotStore<TState>().ClearAsync();
 
-            var persistence = store.WithSnapshotsAndEventSourcing(typeof(TGrain), key, (TState s) => state = s, e =>
-            {
-                state = func(e, state);
+                await eventStore.QueryAsync(async storedEvent =>
+                {
+                    var id = storedEvent.Data.Headers.AggregateId();
 
-                state.Version++;
-            });
+                    if (handledIds.Add(id))
+                    {
+                        await worker.SendAsync(id, ct);
+                    }
+                }, filter, ct: ct);
 
-            await persistence.ReadAsync();
-            await persistence.WriteSnapshotAsync(state);
+                worker.Complete();
+
+                await worker.Completion;
+            }
         }
     }
 }

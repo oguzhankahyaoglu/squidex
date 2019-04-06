@@ -50,17 +50,31 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
         {
             SimpleMapper.Map(@event, this);
 
-            DataDraft = @event.Data;
+            UpdateData(null, @event.Data, false);
+        }
+
+        protected void On(ContentChangesPublished @event)
+        {
+            ScheduleJob = null;
+
+            UpdateData(DataDraft, null, false);
+        }
+
+        protected void On(ContentStatusChanged @event)
+        {
+            ScheduleJob = null;
+
+            Status = @event.Status;
+
+            if (@event.Status == Status.Published)
+            {
+                UpdateData(DataDraft, null, false);
+            }
         }
 
         protected void On(ContentUpdated @event)
         {
-            DataDraft = @event.Data;
-
-            if (Data != null)
-            {
-                Data = @event.Data;
-            }
+            UpdateData(@event.Data, @event.Data, false);
         }
 
         protected void On(ContentOrderChanged @event)
@@ -70,38 +84,12 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
 
         protected void On(ContentUpdateProposed @event)
         {
-            DataDraft = @event.Data;
-
-            IsPending = true;
+            UpdateData(null, @event.Data, true);
         }
 
         protected void On(ContentChangesDiscarded @event)
         {
-            DataDraft = Data;
-
-            IsPending = false;
-        }
-
-        protected void On(ContentChangesPublished @event)
-        {
-            ScheduleJob = null;
-
-            Data = DataDraft;
-
-            IsPending = false;
-        }
-
-        protected void On(ContentStatusChanged @event)
-        {
-            ScheduleJob = null;
-            Status = @event.Status;
-
-            if (@event.Status == Status.Published)
-            {
-                Data = DataDraft;
-            }
-
-            IsPending = false;
+            UpdateData(null, Data, false);
         }
 
         protected void On(ContentSchedulingCancelled @event)
@@ -111,7 +99,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
 
         protected void On(ContentStatusScheduled @event)
         {
-            ScheduleJob = new ScheduleJob(Guid.NewGuid(), @event.Status, @event.Actor, @event.DueTime);
+            ScheduleJob = ScheduleJob.Build(@event.Status, @event.Actor, @event.DueTime);
         }
 
         protected void On(ContentDeleted @event)
@@ -119,11 +107,26 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
             IsDeleted = true;
         }
 
-        public ContentState Apply(Envelope<IEvent> @event)
+        public override ContentState Apply(Envelope<IEvent> @event)
         {
             var payload = (SquidexEvent)@event.Payload;
 
             return Clone().Update(payload, @event.Headers, r => r.DispatchAction(payload));
+        }
+
+        private void UpdateData(NamedContentData data, NamedContentData dataDraft, bool isPending)
+        {
+            if (data != null)
+            {
+                Data = data;
+            }
+
+            if (dataDraft != null)
+            {
+                DataDraft = dataDraft;
+            }
+
+            IsPending = isPending;
         }
     }
 }

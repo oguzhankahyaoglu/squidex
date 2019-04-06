@@ -63,7 +63,7 @@
         </div>
         
         <div class="form-check" *ngIf="enableArchive">
-            <input class="form-check-input" type="checkbox" id="archivedItems" [ngModel]="archived" (ngModelChange)="archivedChanged.emit($event)" />
+            <input class="form-check-input" type="checkbox" id="archivedItems" [ngModel]="archived" (ngModelChange)="archivedChange.emit($event)" />
             <label class="form-check-label" for="archivedItems">
                 Archived items
             </label>
@@ -77,7 +77,7 @@
 
 <ng-container *sqxModalView="saveQueryDialog;onRoot:true">
     <form [formGroup]="saveQueryForm.form" (ngSubmit)="saveQueryComplete()">
-        <sqx-modal-dialog (closed)="saveQueryDialog.hide()">
+        <sqx-modal-dialog (close)="saveQueryDialog.hide()">
             <ng-container title>
                 Name your query
             </ng-container>

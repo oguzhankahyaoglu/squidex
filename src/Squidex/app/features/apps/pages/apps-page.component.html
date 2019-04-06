@@ -26,11 +26,11 @@
     </div>
 </ng-container>
 
-<div class="apps-section">
+<div class="apps-section" *ngIf="(uiState.settings | async).canCreateApps">
     <div class="card card-template card-href" (click)="createNewApp('')">
         <div class="card-body">
             <div class="card-image">
-                <img src="/images/add-app.png" />
+                <img src="./images/add-app.png" />
             </div>
 
             <h4 class="card-title">New App</h4>
@@ -44,7 +44,7 @@
     <div class="card card-template card-href" (click)="createNewApp('Blog')">
         <div class="card-body">
             <div class="card-image">
-                <img src="/images/add-blog.png" />
+                <img src="./images/add-blog.png" />
             </div>
 
             <h4 class="card-title">New Blog Sample</h4>
@@ -61,7 +61,7 @@
     <div class="card card-template card-href" (click)="createNewApp('Profile')">
         <div class="card-body">
             <div class="card-image">
-                <img src="/images/add-profile.png" />
+                <img src="./images/add-profile.png" />
             </div>
 
             <h4 class="card-title">New Profile Sample</h4>
@@ -78,7 +78,7 @@
     <div class="card card-template card-href" (click)="createNewApp('Identity')">
         <div class="card-body">
             <div class="card-image">
-                <img src="/images/add-identity.png" />
+                <img src="./images/add-identity.png" />
             </div>
 
             <h4 class="card-title">New Identity App</h4>
@@ -95,14 +95,18 @@
 
 <ng-container *sqxModalView="addAppDialog;onRoot:true">
     <sqx-app-form [template]="addAppTemplate"
-        (completed)="addAppDialog.hide()">
+        (complete)="addAppDialog.hide()">
     </sqx-app-form>
 </ng-container>
 
 <ng-container *sqxModalView="onboardingDialog;onRoot:true;closeAuto:false">
-    <sqx-onboarding-dialog (closed)="onboardingDialog.hide()"></sqx-onboarding-dialog>
+    <sqx-onboarding-dialog
+        (close)="onboardingDialog.hide()">
+    </sqx-onboarding-dialog>
 </ng-container>
 
 <ng-container *sqxModalView="newsDialog;onRoot:true;closeAuto:false">
-    <sqx-news-dialog [features]="newsFeatures" (closed)="newsDialog.hide()"></sqx-news-dialog>
+    <sqx-news-dialog [features]="newsFeatures"
+        (close)="newsDialog.hide()">
+    </sqx-news-dialog>
 </ng-container>

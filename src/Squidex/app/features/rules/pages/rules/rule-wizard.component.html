@@ -1,4 +1,4 @@
-<sqx-modal-dialog large="true" fullHeight="true" (closed)="complete()" [showFooter]="step === 2 || step === 4">
+<sqx-modal-dialog large="true" fullHeight="true" (close)="emitComplete()" [showFooter]="step === 2 || step === 4">
     <ng-container title>
         <ng-container *ngIf="mode === 'EditTrigger'">
             Edit Trigger
@@ -79,85 +79,12 @@
             <form [formGroup]="actionForm.form" (ngSubmit)="saveAction()">
                 <h3 class="wizard-title">{{ruleActions[actionType].display}}</h3>
 
-                <ng-container [ngSwitch]="actionType">
-                    <ng-container *ngSwitchCase="'Algolia'">
-                        <sqx-algolia-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-algolia-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'AzureQueue'">
-                        <sqx-azure-queue-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-azure-queue-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Discourse'">
-                        <sqx-discourse-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-discourse-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'ElasticSearch'">
-                        <sqx-elastic-search-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-elastic-search-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Email'">
-                        <sqx-email-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-email-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Fastly'">
-                        <sqx-fastly-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-fastly-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Medium'">
-                        <sqx-medium-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-medium-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Prerender'">
-                        <sqx-prerender-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-prerender-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Slack'">
-                        <sqx-slack-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-slack-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Tweet'">
-                        <sqx-tweet-action
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-tweet-action>
-                    </ng-container>
-                    <ng-container *ngSwitchCase="'Webhook'">
-                        <sqx-webhook-action        
-                            [action]="action"
-                            [actionForm]="actionForm.form"
-                            [actionFormSubmitted]="actionForm.submitted | async">
-                        </sqx-webhook-action>
-                    </ng-container>
-                </ng-container>
+                <sqx-generic-action
+                    [definition]="ruleActions[actionType]"
+                    [action]="action"
+                    [actionForm]="actionForm.form"
+                    [actionFormSubmitted]="actionForm.submitted | async">
+                </sqx-generic-action>
             </form>
         </ng-container>
     </ng-container>
@@ -165,17 +92,17 @@
     <ng-container footer>
         <div>
             <ng-container *ngIf="mode === 'Wizard' && step === 2">
-                <button type="reset" class="float-left btn btn-secondary" (click)="complete()">Cancel</button>
+                <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()">Cancel</button>
                 <button type="submit" class="float-right btn btn-primary" (click)="saveTrigger()">Next</button>
             </ng-container>
             
             <ng-container *ngIf="mode !== 'Wizard' && step === 2">
-                <button type="reset" class="float-left btn btn-secondary" (click)="complete()">Cancel</button>
+                <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()">Cancel</button>
                 <button type="submit" class="float-right btn btn-primary" (click)="saveTrigger()">Save</button>
             </ng-container>
 
             <ng-container *ngIf="step === 4">
-                <button type="reset" class="float-left btn btn-secondary" (click)="complete()">Cancel</button>
+                <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()">Cancel</button>
                 <button type="submit" class="float-right btn btn-primary" (click)="saveAction()">Save</button>
             </ng-container>
         </div>

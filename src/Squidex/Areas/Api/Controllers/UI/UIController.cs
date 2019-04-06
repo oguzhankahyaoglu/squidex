@@ -5,35 +5,61 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Orleans;
 using Squidex.Areas.Api.Controllers.UI.Models;
-using Squidex.Config;
 using Squidex.Domain.Apps.Entities.Apps;
-using Squidex.Extensions.Actions.Twitter;
 using Squidex.Infrastructure.Commands;
 using Squidex.Infrastructure.Orleans;
-using Squidex.Pipeline;
+using Squidex.Infrastructure.Security;
+using Squidex.Shared;
+using Squidex.Shared.Identity;
+using Squidex.Web;
 
 namespace Squidex.Areas.Api.Controllers.UI
 {
     public sealed class UIController : ApiController
     {
+        private static readonly Permission CreateAppPermission = new Permission(Permissions.AdminAppCreate);
         private readonly MyUIOptions uiOptions;
-        private readonly TwitterOptions twitterOptions;
         private readonly IGrainFactory grainFactory;
 
         public UIController(ICommandBus commandBus,
             IOptions<MyUIOptions> uiOptions,
-            IOptions<TwitterOptions> twitterOptions,
             IGrainFactory grainFactory)
             : base(commandBus)
         {
             this.uiOptions = uiOptions.Value;
+
             this.grainFactory = grainFactory;
-            this.twitterOptions = twitterOptions.Value;
+        }
+
+        /// <summary>
+        /// Get ui settings.
+        /// </summary>
+        /// <returns>
+        /// 200 => UI settings returned.
+        /// </returns>
+        [HttpGet]
+        [Route("ui/settings/")]
+        [ProducesResponseType(typeof(UISettingsDto), 200)]
+        [ApiPermission]
+        public IActionResult GetSettings()
+        {
+            var result = new UISettingsDto
+            {
+                MapType = uiOptions.Map?.Type ?? "OSM",
+                MapKey = uiOptions.Map?.GoogleMaps?.Key
+            };
+
+            var canCreateApps = !uiOptions.OnlyAdminsCanCreateApps || User.Permissions().Includes(CreateAppPermission);
+
+            result.CanCreateApps = canCreateApps;
+
+            return Ok(result);
         }
 
         /// <summary>
@@ -46,16 +72,11 @@ namespace Squidex.Areas.Api.Controllers.UI
         /// </returns>
         [HttpGet]
         [Route("apps/{app}/ui/settings/")]
-        [ProducesResponseType(typeof(UISettingsDto), 200)]
+        [ProducesResponseType(typeof(Dictionary<string, string>), 200)]
         [ApiPermission]
         public async Task<IActionResult> GetSettings(string app)
         {
             var result = await grainFactory.GetGrain<IAppUISettingsGrain>(AppId).GetAsync();
-
-            result.Value.Add("mapType", uiOptions.Map?.Type ?? "OSM");
-            result.Value.Add("mapKey", uiOptions.Map?.GoogleMaps?.Key);
-
-            result.Value.Add("supportTwitterAction", twitterOptions.IsConfigured());
 
             return Ok(result.Value);
         }

@@ -10,13 +10,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Migrate_01.Migrations;
+using Migrate_01.Migrations.MongoDb;
 using Squidex.Infrastructure.Migrations;
 
 namespace Migrate_01
 {
     public sealed class MigrationPath : IMigrationPath
     {
-        private const int CurrentVersion = 14;
+        private const int CurrentVersion = 17;
         private readonly IServiceProvider serviceProvider;
 
         public MigrationPath(IServiceProvider serviceProvider)
@@ -94,6 +95,24 @@ namespace Migrate_01
             if (version < 1)
             {
                 yield return serviceProvider.GetRequiredService<AddPatterns>();
+            }
+
+            // Version 15: Introduce custom full text search actors.
+            if (version < 15)
+            {
+                yield return serviceProvider.GetRequiredService<RestructureContentCollection>();
+            }
+
+            // Version 16: Introduce file name slugs for assets.
+            if (version < 16)
+            {
+                yield return serviceProvider.GetRequiredService<CreateAssetSlugs>();
+            }
+
+            // Version 17: Rename slug field.
+            if (version < 17)
+            {
+                yield return serviceProvider.GetService<RenameSlugField>();
             }
 
             yield return serviceProvider.GetRequiredService<StartEventConsumers>();

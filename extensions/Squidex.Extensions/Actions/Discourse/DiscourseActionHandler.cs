@@ -5,10 +5,10 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
-using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Squidex.Domain.Apps.Core.HandleRules;
 using Squidex.Domain.Apps.Core.HandleRules.EnrichedEvents;
@@ -34,7 +34,6 @@ namespace Squidex.Extensions.Actions.Discourse
 
             var json = new Dictionary<string, object>
             {
-                ["raw"] = Format(action.Text, @event),
                 ["title"] = Format(action.Title, @event)
             };
 
@@ -56,6 +55,8 @@ namespace Squidex.Extensions.Actions.Discourse
                 RequestBody = requestBody
             };
 
+            json["raw"] = Format(action.Text, @event);
+
             var description =
                 action.Topic.HasValue ?
                 DescriptionCreateTopic :
@@ -64,7 +65,7 @@ namespace Squidex.Extensions.Actions.Discourse
             return (description, ruleJob);
         }
 
-        protected override async Task<(string Dump, Exception Exception)> ExecuteJobAsync(DiscourseJob job)
+        protected override async Task<Result> ExecuteJobAsync(DiscourseJob job, CancellationToken ct = default)
         {
             using (var httpClient = httpClientFactory.CreateClient())
             {
@@ -73,7 +74,7 @@ namespace Squidex.Extensions.Actions.Discourse
                     Content = new StringContent(job.RequestBody, Encoding.UTF8, "application/json")
                 };
 
-                return await httpClient.OneWayRequestAsync(request, job.RequestBody);
+                return await httpClient.OneWayRequestAsync(request, job.RequestBody, ct);
             }
         }
     }

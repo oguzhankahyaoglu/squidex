@@ -49,8 +49,8 @@ namespace Squidex.Infrastructure.CQRS.Events
 
             this.exchange = exchange;
             this.eventsFilter = eventsFilter;
-            this.jsonSerializer = jsonSerializer;
             this.eventPublisherName = eventPublisherName;
+            this.jsonSerializer = jsonSerializer;
         }
 
         protected override void DisposeObject(bool disposing)
@@ -79,6 +79,11 @@ namespace Squidex.Infrastructure.CQRS.Events
             {
                 throw new ConfigurationException($"RabbitMq event bus failed to connect to {connectionFactory.Endpoint}", e);
             }
+        }
+
+        public bool Handles(StoredEvent @event)
+        {
+            return true;
         }
 
         public Task ClearAsync()

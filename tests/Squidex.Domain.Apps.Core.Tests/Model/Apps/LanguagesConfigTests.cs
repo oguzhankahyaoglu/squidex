@@ -76,7 +76,7 @@ namespace Squidex.Domain.Apps.Core.Model.Apps
         public void Should_add_language()
         {
             var config_0 = LanguagesConfig.Build(Language.DE);
-            var config_1 = config_0.Set(new LanguageConfig(Language.IT));
+            var config_1 = config_0.Set(Language.IT);
 
             config_1.OfType<LanguageConfig>().ToList().Should().BeEquivalentTo(
                 new List<LanguageConfig>
@@ -102,7 +102,7 @@ namespace Squidex.Domain.Apps.Core.Model.Apps
         {
             var config_0 = LanguagesConfig.Build(Language.DE);
 
-            config_0.Set(new LanguageConfig(Language.DE));
+            config_0.Set(Language.DE);
         }
 
         [Fact]
@@ -110,8 +110,8 @@ namespace Squidex.Domain.Apps.Core.Model.Apps
         {
             var config_0 = LanguagesConfig.Build(Language.DE);
 
-            var config_1 = config_0.Set(new LanguageConfig(Language.UK));
-            var config_2 = config_1.Set(new LanguageConfig(Language.IT));
+            var config_1 = config_0.Set(Language.UK);
+            var config_2 = config_1.Set(Language.IT);
             var config_3 = config_2.MakeMaster(Language.IT);
 
             Assert.Equal(Language.IT, config_3.Master.Language);
@@ -215,6 +215,24 @@ namespace Squidex.Domain.Apps.Core.Model.Apps
 
             Assert.NotNull(((IEnumerable)config_0).GetEnumerator());
             Assert.NotNull(((IEnumerable<IFieldPartitionItem>)config_0).GetEnumerator());
+        }
+
+        [Fact]
+        public void Should_resolve_language_by_string()
+        {
+            var config_0 = LanguagesConfig.Build(Language.DE);
+
+            Assert.True(config_0.TryGetItem("de", out var item));
+            Assert.NotNull(item);
+        }
+
+        [Fact]
+        public void Should_not_resolve_language_fór_invalid_language()
+        {
+            var config_0 = LanguagesConfig.Build(Language.DE);
+
+            Assert.False(config_0.TryGetItem("invalid", out var item));
+            Assert.Null(item);
         }
     }
 }

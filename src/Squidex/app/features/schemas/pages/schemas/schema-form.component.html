@@ -1,9 +1,10 @@
 <form [formGroup]="createForm.form" (ngSubmit)="createSchema()">     
-    <sqx-modal-dialog (closed)="cancel()" [large]="false">
+    <sqx-modal-dialog (close)="emitCancel()" [large]="false">
         <ng-container title>
             <ng-container *ngIf="import; else noImport">
                 Clone Schema
             </ng-container>
+
             <ng-template #noImport>
                 Create Schema
             </ng-template>
@@ -34,7 +35,7 @@
                 <div class="row no-gutters">
                     <div class="col-6 type">
                         <label>
-                            <input type="radio" class="radio-input" formControlName="isSingleton" [value]="false" />
+                            <input type="radio" class="radio-input" formControlName="isSingleton" [value]="false" name="singleton" />
                         
                             <div class="row no-gutters">
                                 <div class="col-auto">
@@ -52,7 +53,7 @@
                     </div>
                     <div class="col-6 type">
                         <label>
-                            <input type="radio" class="radio-input" formControlName="isSingleton" [value]="true" />
+                            <input type="radio" class="radio-input" formControlName="isSingleton" [value]="true" name="singleton" />
                         
                             <div class="row no-gutters">
                                 <div class="col-auto">
@@ -83,7 +84,7 @@
         </ng-container>
 
         <ng-container footer>
-            <button type="reset" class="float-left btn btn-secondary" (click)="cancel()">Cancel</button>
+            <button type="reset" class="float-left btn btn-secondary" (click)="emitCancel()">Cancel</button>
             <button type="submit" class="float-right btn btn-success">Create</button>
         </ng-container>
     </sqx-modal-dialog>

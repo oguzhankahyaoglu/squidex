@@ -10,7 +10,6 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Net.Http.Headers;
 
 namespace Squidex.Areas.Frontend.Middlewares
 {
@@ -29,46 +28,41 @@ namespace Squidex.Areas.Frontend.Middlewares
 
         public async Task Invoke(HttpContext context)
         {
-            var responseBuffer = new MemoryStream();
-            var responseBody = context.Response.Body;
-
-            context.Response.Body = responseBuffer;
-
-            await next(context);
-
-            responseBuffer.Seek(0, SeekOrigin.Begin);
-
-            if (context.Response.StatusCode == 200 && IsIndex(context) && IsHtml(context))
+            if (context.IsHtmlPath())
             {
-                using (var reader = new StreamReader(responseBuffer))
-                {
-                    var response = await reader.ReadToEndAsync();
+                var responseBuffer = new MemoryStream();
+                var responseBody = context.Response.Body;
 
+                context.Response.Body = responseBuffer;
+
+                await next(context);
+
+                context.Response.Body = responseBody;
+
+                var response = Encoding.UTF8.GetString(responseBuffer.ToArray());
+
+                if (context.IsIndex())
+                {
                     response = InjectStyles(response);
                     response = InjectScripts(response);
-
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        using (var writer = new StreamWriter(memoryStream))
-                        {
-                            writer.Write(response);
-                            writer.Flush();
-
-                            memoryStream.Seek(0, SeekOrigin.Begin);
-
-                            context.Response.Headers[HeaderNames.ContentLength] = memoryStream.Length.ToString();
-
-                            await memoryStream.CopyToAsync(responseBody);
-                        }
-                    }
                 }
-            }
-            else if (context.Response.StatusCode != 304)
-            {
-                await responseBuffer.CopyToAsync(responseBody);
-            }
 
-            context.Response.Body = responseBody;
+                var basePath = context.Request.PathBase;
+
+                if (basePath.HasValue)
+                {
+                    response = AdjustBase(response, basePath.Value);
+                }
+
+                context.Response.ContentLength = Encoding.UTF8.GetByteCount(response);
+                context.Response.Body = responseBody;
+
+                await context.Response.WriteAsync(response);
+            }
+            else
+            {
+                await next(context);
+            }
         }
 
         private static string InjectStyles(string response)
@@ -109,14 +103,9 @@ namespace Squidex.Areas.Frontend.Middlewares
             return response;
         }
 
-        private static bool IsIndex(HttpContext context)
+        private static string AdjustBase(string response, string baseUrl)
         {
-            return context.Request.Path.Value.Equals("/index.html", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsHtml(HttpContext context)
-        {
-            return context.Response.ContentType?.ToLower().Contains("text/html") == true;
+            return response.Replace("<base href=\"/\">", $"<base href=\"{baseUrl}/\">");
         }
     }
 }

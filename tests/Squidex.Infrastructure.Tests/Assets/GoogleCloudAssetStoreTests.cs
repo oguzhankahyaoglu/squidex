@@ -7,25 +7,27 @@
 
 using Xunit;
 
-#pragma warning disable xUnit1000 // Test classes must be public
-
 namespace Squidex.Infrastructure.Assets
 {
-    internal class GoogleCloudAssetStoreTests : AssetStoreTests<GoogleCloudAssetStore>
+    [Trait("Category", "Dependencies")]
+    public class GoogleCloudAssetStoreTests : AssetStoreTests<GoogleCloudAssetStore>, IClassFixture<GoogleCloudAssetStoreFixture>
     {
-        public override GoogleCloudAssetStore CreateStore()
+        private readonly GoogleCloudAssetStoreFixture fixture;
+
+        public GoogleCloudAssetStoreTests(GoogleCloudAssetStoreFixture fixture)
         {
-            return new GoogleCloudAssetStore("squidex-test");
+            this.fixture = fixture;
         }
 
-        public override void Dispose()
+        public override GoogleCloudAssetStore CreateStore()
         {
+            return fixture.AssetStore;
         }
 
         [Fact]
         public void Should_calculate_source_url()
         {
-            var url = Sut.GeneratePublicUrl(AssetId, 1, null);
+            var url = Sut.GeneratePublicUrl(FileName);
 
             Assert.Null(url);
         }

@@ -7,7 +7,6 @@
 
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -84,13 +83,16 @@ namespace Squidex.Pipeline.Squid
                 svg = svg.Replace("{{TEXT3}}", l3);
                 svg = svg.Replace("[COLOR]", background);
 
+                context.Response.StatusCode = 200;
                 context.Response.ContentType = "image/svg+xml";
                 context.Response.Headers["Cache-Control"] = "public, max-age=604800";
 
                 await context.Response.WriteAsync(svg);
             }
-
-            await next(context);
+            else
+            {
+                await next(context);
+            }
         }
 
         private static (string, string, string) SplitText(string text)
@@ -128,7 +130,7 @@ namespace Squidex.Pipeline.Squid
 
         private static string LoadSvg(string name)
         {
-            var assembly = typeof(SquidMiddleware).GetTypeInfo().Assembly;
+            var assembly = typeof(SquidMiddleware).Assembly;
 
             using (var resourceStream = assembly.GetManifestResourceStream($"Squidex.Pipeline.Squid.icon-{name}.svg"))
             {

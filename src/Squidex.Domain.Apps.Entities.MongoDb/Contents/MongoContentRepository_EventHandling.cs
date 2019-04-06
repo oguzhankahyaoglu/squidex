@@ -26,6 +26,11 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
             get { return "^(content-)|(asset-)"; }
         }
 
+        public bool Handles(StoredEvent @event)
+        {
+            return @event.Data.Type == typeAssetDeleted || @event.Data.Type == typeContentDeleted;
+        }
+
         public Task On(Envelope<IEvent> @event)
         {
             return this.DispatchActionAsync(@event.Payload);
@@ -33,16 +38,12 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
 
         protected Task On(AssetDeleted @event)
         {
-            return Task.WhenAll(
-                contentsDraft.CleanupAsync(@event.AssetId),
-                contentsPublished.CleanupAsync(@event.AssetId));
+            return contents.CleanupAsync(@event.AssetId);
         }
 
         protected Task On(ContentDeleted @event)
         {
-            return Task.WhenAll(
-                contentsDraft.CleanupAsync(@event.ContentId),
-                contentsPublished.CleanupAsync(@event.ContentId));
+            return contents.CleanupAsync(@event.ContentId);
         }
 
         Task IEventConsumer.ClearAsync()

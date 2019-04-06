@@ -30,6 +30,9 @@ namespace Squidex.Domain.Apps.Entities.Assets.State
         public string MimeType { get; set; }
 
         [DataMember]
+        public string Slug { get; set; }
+
+        [DataMember]
         public long FileVersion { get; set; }
 
         [DataMember]
@@ -62,9 +65,18 @@ namespace Squidex.Domain.Apps.Entities.Assets.State
         {
             SimpleMapper.Map(@event, this);
 
-            TotalSize += @event.FileSize;
+            FileName = @event.FileName;
 
-            AppId = @event.AppId;
+            if (string.IsNullOrWhiteSpace(@event.Slug))
+            {
+                Slug = @event.FileName.ToAssetSlug();
+            }
+            else
+            {
+                Slug = @event.Slug;
+            }
+
+            TotalSize += @event.FileSize;
         }
 
         protected void On(AssetUpdated @event)
@@ -74,14 +86,22 @@ namespace Squidex.Domain.Apps.Entities.Assets.State
             TotalSize += @event.FileSize;
         }
 
-        protected void On(AssetTagged @event)
+        protected void On(AssetAnnotated @event)
         {
-            Tags = @event.Tags;
-        }
+            if (!string.IsNullOrWhiteSpace(@event.FileName))
+            {
+                FileName = @event.FileName;
+            }
 
-        protected void On(AssetRenamed @event)
-        {
-            FileName = @event.FileName;
+            if (!string.IsNullOrWhiteSpace(@event.Slug))
+            {
+                Slug = @event.Slug;
+            }
+
+            if (@event.Tags != null)
+            {
+                Tags = @event.Tags;
+            }
         }
 
         protected void On(AssetDeleted @event)
@@ -89,7 +109,7 @@ namespace Squidex.Domain.Apps.Entities.Assets.State
             IsDeleted = true;
         }
 
-        public AssetState Apply(Envelope<IEvent> @event)
+        public override AssetState Apply(Envelope<IEvent> @event)
         {
             var payload = (SquidexEvent)@event.Payload;
 

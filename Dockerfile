@@ -20,11 +20,11 @@ RUN cp -a /tmp/node_modules src/Squidex/ \
  
 # Test Backend
 RUN dotnet restore \
- && dotnet test tests/Squidex.Infrastructure.Tests/Squidex.Infrastructure.Tests.csproj \ 
+ && dotnet test --filter Category!=Dependencies tests/Squidex.Infrastructure.Tests/Squidex.Infrastructure.Tests.csproj \ 
  && dotnet test tests/Squidex.Domain.Apps.Core.Tests/Squidex.Domain.Apps.Core.Tests.csproj \ 
  && dotnet test tests/Squidex.Domain.Apps.Entities.Tests/Squidex.Domain.Apps.Entities.Tests.csproj \
  && dotnet test tests/Squidex.Domain.Users.Tests/Squidex.Domain.Users.Tests.csproj \
- && dotnet test tests/Squidex.Tests/Squidex.Tests.csproj
+ && dotnet test tests/Squidex.Web.Tests/Squidex.Web.Tests.csproj
 
 # Publish
 RUN dotnet publish src/Squidex/Squidex.csproj --output /out/alpine --configuration Release -r alpine.3.7-x64
@@ -37,10 +37,11 @@ FROM microsoft/dotnet:2.2-runtime-deps-alpine
 # Default AspNetCore directory
 WORKDIR /app
 
-# add libuv
+# add libuv & curl
 RUN apk update \
  && apk add --no-cache libc6-compat \
  && apk add --no-cache libuv \
+ && apk add --no-cache curl \
  && ln -s /usr/lib/libuv.so.1 /usr/lib/libuv.so
 
 # Copy from build stage

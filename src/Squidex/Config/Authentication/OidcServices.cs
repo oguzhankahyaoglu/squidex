@@ -8,6 +8,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.DependencyInjection;
+using Squidex.Web;
 
 namespace Squidex.Config.Authentication
 {
@@ -24,6 +25,7 @@ namespace Squidex.Config.Authentication
                     options.Authority = identityOptions.OidcAuthority;
                     options.ClientId = identityOptions.OidcClient;
                     options.ClientSecret = identityOptions.OidcSecret;
+                    options.Scope.Add(Constants.EmailScope);
                     options.Scope.Add(Constants.PermissionsScope);
                     options.RequireHttpsMetadata = false;
                 });

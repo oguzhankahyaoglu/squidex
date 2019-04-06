@@ -1,4 +1,4 @@
-<sqx-modal-dialog (closed)="complete()" large="true">
+<sqx-modal-dialog (close)="emitComplete()" large="true">
     <ng-container title>
         <ng-container *ngIf="parent; else noParent">
             Add Nested Field
@@ -18,7 +18,7 @@
                     <div class="row">
                         <div class="col-4 type" *ngFor="let fieldType of fieldTypes">
                             <label>
-                                <input type="radio" class="radio-input" formControlName="type" value="{{fieldType.type}}" />
+                                <input type="radio" class="radio-input" formControlName="type" value="{{fieldType.type}}" name="fieldType" />
 
                                 <div class="row no-gutters">
                                     <div class="col-auto">
@@ -91,11 +91,11 @@
     </ng-container>
 
     <ng-container footer>
-        <button type="reset" class="float-left btn btn-secondary" (click)="complete()">Cancel</button>
+        <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()">Cancel</button>
 
         <div class="float-right" *ngIf="!isEditing">
-            <button type="button" class="btn btn-outline-success mr-1" (click)="addField(false, false)">Create and close</button>
-            <button type="button" class="btn btn-success mr-1" (click)="addField(true, false)">Create and add field</button>
+            <button type="button" class="btn btn-outline-success mr-1" (click)="addField(false)">Create and close</button>
+            <button type="button" class="btn btn-success mr-1" (click)="addField(true)">Create and add field</button>
             <button type="button" class="btn btn-success" (click)="addField(false, true)">Create and edit field</button>
         </div>
 

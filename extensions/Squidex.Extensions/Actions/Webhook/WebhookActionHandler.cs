@@ -8,6 +8,7 @@
 using System;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Squidex.Domain.Apps.Core.HandleRules;
 using Squidex.Domain.Apps.Core.HandleRules.EnrichedEvents;
@@ -17,6 +18,7 @@ namespace Squidex.Extensions.Actions.Webhook
 {
     public sealed class WebhookActionHandler : RuleActionHandler<WebhookAction, WebhookJob>
     {
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(2);
         private readonly IHttpClientFactory httpClientFactory;
 
         public WebhookActionHandler(RuleEventFormatter formatter, IHttpClientFactory httpClientFactory)
@@ -43,10 +45,12 @@ namespace Squidex.Extensions.Actions.Webhook
             return (ruleDescription, ruleJob);
         }
 
-        protected override async Task<(string Dump, Exception Exception)> ExecuteJobAsync(WebhookJob job)
+        protected override async Task<Result> ExecuteJobAsync(WebhookJob job, CancellationToken ct = default)
         {
             using (var httpClient = httpClientFactory.CreateClient())
             {
+                httpClient.Timeout = DefaultTimeout;
+
                 var request = new HttpRequestMessage(HttpMethod.Post, job.RequestUrl)
                 {
                     Content = new StringContent(job.RequestBody, Encoding.UTF8, "application/json")
@@ -56,7 +60,7 @@ namespace Squidex.Extensions.Actions.Webhook
                 request.Headers.Add("X-Application", "Squidex Webhook");
                 request.Headers.Add("User-Agent", "Squidex Webhook");
 
-                return await httpClient.OneWayRequestAsync(request, job.RequestBody);
+                return await httpClient.OneWayRequestAsync(request, job.RequestBody, ct);
             }
         }
     }

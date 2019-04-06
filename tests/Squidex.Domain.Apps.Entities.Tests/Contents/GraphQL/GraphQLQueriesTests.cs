@@ -56,6 +56,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
                     isImage
                     pixelWidth
                     pixelHeight
+                    slug
                   }
                 }";
 
@@ -89,7 +90,8 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
                             fileVersion = 123,
                             isImage = true,
                             pixelWidth = 800,
-                            pixelHeight = 600
+                            pixelHeight = 600,
+                            slug = "myfile.png"
                         }
                     }
                 }
@@ -122,6 +124,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
                       isImage
                       pixelWidth
                       pixelHeight
+                      slug
                     }   
                   }
                 }";
@@ -159,7 +162,8 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
                                 fileVersion = 123,
                                 isImage = true,
                                 pixelWidth = 800,
-                                pixelHeight = 600
+                                pixelHeight = 600,
+                                slug = "myfile.png"
                             }
                         }
                     }
@@ -194,6 +198,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
                     isImage
                     pixelWidth
                     pixelHeight
+                    slug
                   }}
                 }}";
 
@@ -223,7 +228,8 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
                         fileVersion = 123,
                         isImage = true,
                         pixelWidth = 800,
-                        pixelHeight = 600
+                        pixelHeight = 600,
+                        slug = "myfile.png"
                     }
                 }
             };
