@@ -5,6 +5,7 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
+using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -23,7 +24,8 @@ namespace Squidex.Config.Web
     {
         public static void AddMyMvcWithPlugins(this IServiceCollection services, IConfiguration config)
         {
-            services.AddSingletonAs(c => new ExposedValues(c.GetRequiredService<IOptions<ExposedConfiguration>>().Value, config, typeof(WebServices).Assembly))
+            services.AddSingletonAs(c
+                    => new ExposedValues(c.GetRequiredService<IOptions<ExposedConfiguration>>().Value, config, typeof(WebServices).Assembly))
                 .AsSelf();
 
             services.AddSingletonAs<FileCallbackResultExecutor>()
@@ -37,9 +39,11 @@ namespace Squidex.Config.Web
 
             services.AddSingletonAs<RobotsTxtMiddleware>()
                 .AsSelf();
-
-            services.AddSingletonAs<EnforceHttpsMiddleware>()
-                .AsSelf();
+            if (!Debugger.IsAttached)
+            {
+                services.AddSingletonAs<EnforceHttpsMiddleware>()
+                    .AsSelf();
+            }
 
             services.AddSingletonAs<LocalCacheMiddleware>()
                 .AsSelf();
@@ -53,20 +57,17 @@ namespace Squidex.Config.Web
             services.AddSingletonAs<ApiPermissionUnifier>()
                 .AsOptional<IClaimsTransformation>();
 
-            services.Configure<ApiBehaviorOptions>(options =>
-            {
-                options.SuppressModelStateInvalidFilter = true;
-            });
+            services.Configure<ApiBehaviorOptions>(options => { options.SuppressModelStateInvalidFilter = true; });
 
             services.AddMvc(options =>
-            {
-                options.Filters.Add<ETagFilter>();
-                options.Filters.Add<DeferredActionFilter>();
-                options.Filters.Add<AppResolver>();
-                options.Filters.Add<MeasureResultFilter>();
-            })
-            .AddMyPlugins(config)
-            .AddMySerializers();
+                {
+                    options.Filters.Add<ETagFilter>();
+                    options.Filters.Add<DeferredActionFilter>();
+                    options.Filters.Add<AppResolver>();
+                    options.Filters.Add<MeasureResultFilter>();
+                })
+                .AddMyPlugins(config)
+                .AddMySerializers();
 
             services.AddCors();
             services.AddRouting();
