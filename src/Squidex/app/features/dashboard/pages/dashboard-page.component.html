@@ -1,18 +1,18 @@
-<ng-container *ngIf="app | async; let app">
-    <sqx-title message="{app} | Dashboard" parameter1="app" [value1]="app.name"></sqx-title>
+<sqx-title message="Dashboard"></sqx-title>
 
+<ng-container *ngIf="appsState.selectedApp | async; let app">
     <div class="dashboard" @fade>
         <div class="dashboard-inner">
             <div>
                 <h1 class="dashboard-title">Hi {{authState.user?.displayName}}</h1>
 
                 <div class="subtext">
-                    Welcome to <span class="app-name">{{app.name}}</span> dashboard.
+                    Welcome to <span class="app-name">{{app.displayName}}</span> dashboard.
                 </div>
             </div>
 
             <div class="clearfix">
-                <a class="card card-href" [routerLink]="['schemas', { showDialog: true }]" *sqxPermission="'squidex.apps.{app}.schemas.*.read'">
+                <a class="card card-href" [routerLink]="['schemas', { showDialog: true }]" *ngIf="app.canCreateSchema">
                     <div class="card-body">
                         <div class="card-image">
                             <img src="./images/dashboard-schema.png" />

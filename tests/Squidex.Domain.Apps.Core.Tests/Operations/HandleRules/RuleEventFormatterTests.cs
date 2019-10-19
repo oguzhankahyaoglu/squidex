@@ -171,6 +171,22 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
         }
 
         [Theory]
+        [InlineData("$CONTENT_STATUS")]
+        [InlineData("Script(`${event.status}`)")]
+        public void Should_format_content_status_when_found(string script)
+        {
+            Assert.Equal("Published", sut.Format(script, new EnrichedContentEvent { Status = Status.Published }));
+        }
+
+        [Theory]
+        [InlineData("$CONTENT_ACTION")]
+        [InlineData("Script(contentAction())")]
+        public void Should_null_when_content_status_not_found(string script)
+        {
+            Assert.Equal("null", sut.Format(script, new EnrichedAssetEvent()));
+        }
+
+        [Theory]
         [InlineData("$CONTENT_ACTION")]
         [InlineData("Script(`${event.type}`)")]
         public void Should_format_content_actions_when_found(string script)
@@ -348,6 +364,26 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
             var result = sut.Format(script, @event);
 
             Assert.Equal("From client:android", result);
+        }
+
+        [Fact]
+        public void Should_format_json()
+        {
+            var @event = new EnrichedContentEvent { Actor = new RefToken(RefTokenType.Client, "android") };
+
+            var result = sut.Format("Script(JSON.stringify({ actor: event.actor.toString() }))", @event);
+
+            Assert.Equal("{\"actor\":\"client:android\"}", result);
+        }
+
+        [Fact]
+        public void Should_format_json_with_special_characters()
+        {
+            var @event = new EnrichedContentEvent { Actor = new RefToken(RefTokenType.Client, "mobile\"android") };
+
+            var result = sut.Format("Script(JSON.stringify({ actor: event.actor.toString() }))", @event);
+
+            Assert.Equal("{\"actor\":\"client:mobile\\\"android\"}", result);
         }
     }
 }

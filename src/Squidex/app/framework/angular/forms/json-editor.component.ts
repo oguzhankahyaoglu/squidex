@@ -5,12 +5,12 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, forwardRef, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, forwardRef, Input, ViewChild } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
-import { ExternalControlComponent, ResourceLoaderService } from '@app/framework/internal';
+import { ResourceLoaderService, StatefulControlComponent } from '@app/framework/internal';
 
 declare var ace: any;
 
@@ -25,22 +25,26 @@ export const SQX_JSON_EDITOR_CONTROL_VALUE_ACCESSOR: any = {
     providers: [SQX_JSON_EDITOR_CONTROL_VALUE_ACCESSOR],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class JsonEditorComponent extends ExternalControlComponent<string> implements AfterViewInit {
+export class JsonEditorComponent extends StatefulControlComponent<{}, string> implements AfterViewInit {
     private valueChanged = new Subject();
     private aceEditor: any;
     private value: any;
     private valueString: string;
     private isDisabled = false;
 
-    @ViewChild('editor')
+    @ViewChild('editor', { static: false })
     public editor: ElementRef<HTMLDivElement>;
+
+    @Input()
+    public noBorder = false;
+
+    @Input()
+    public height = 0;
 
     constructor(changeDetector: ChangeDetectorRef,
         private readonly resourceLoader: ResourceLoaderService
     ) {
-        super(changeDetector);
-
-        changeDetector.detach();
+        super(changeDetector, {});
     }
 
     public writeValue(obj: any) {
@@ -72,6 +76,10 @@ export class JsonEditorComponent extends ExternalControlComponent<string> implem
                 this.changeValue();
             });
 
+        if (this.height) {
+            this.editor.nativeElement.style.height = `${this.height}px`;
+        }
+
         this.resourceLoader.loadScript('https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js').then(() => {
             this.aceEditor = ace.edit(this.editor.nativeElement);
 
@@ -89,6 +97,8 @@ export class JsonEditorComponent extends ExternalControlComponent<string> implem
             this.aceEditor.on('change', () => {
                 this.valueChanged.next();
             });
+
+            this.detach();
         });
     }
 

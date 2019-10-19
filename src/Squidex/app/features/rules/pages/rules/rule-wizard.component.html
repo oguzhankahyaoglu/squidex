@@ -6,22 +6,17 @@
         <ng-container *ngIf="mode === 'EditAction'">
             Edit Action
         </ng-container>
-        <ng-container *ngIf="mode === 'Wizard' && step === 1">
-            Step 1 of 4: Select Trigger
-        </ng-container>
-        <ng-container *ngIf="mode === 'Wizard' && step === 2">
-            Step 2 of 4: Configure Trigger
-        </ng-container>
-        <ng-container *ngIf="mode === 'Wizard' && step === 3">
-            Step 3 of 4: Select Action
-        </ng-container>
-        <ng-container *ngIf="mode === 'Wizard' && step === 4">
-            Step 4 of 4: Configure Action
+        <ng-container *ngIf="mode === 'Wizard'">
+            {{titles[step - 1]}}
         </ng-container>
     </ng-container>
 
     <ng-container content>
         <div class="row no-gutters" *ngIf="step === 1">
+            <sqx-form-alert marginTop="0">
+                The selection of the trigger type cannot be changed later.
+            </sqx-form-alert>
+
             <div *ngFor="let triggerType of ruleTriggers | sqxKeys" class="col-12 col-md-6">
                 <div class="rule-element" (click)="selectTriggerType(triggerType)">
                     <sqx-rule-element [type]="triggerType" [isSmall]="false" [element]="ruleTriggers[triggerType]"></sqx-rule-element>
@@ -30,8 +25,10 @@
         </div>
         
         <ng-container *ngIf="step === 2 && schemas">
-            <form [formGroup]="triggerForm.form" (ngSubmit)="saveTrigger()">  
-                <h3 class="wizard-title">{{ruleTriggers[triggerType].display}}</h3>
+            <form [formGroup]="triggerForm.form" (ngSubmit)="saveTrigger()">
+                <h3 class="wizard-title">
+                    {{triggerElement.display}}
+                </h3>
 
                 <ng-container [ngSwitch]="triggerType">
                     <ng-container *ngSwitchCase="'AssetChanged'">
@@ -68,6 +65,10 @@
         </ng-container>
     
         <div class="row no-gutters" *ngIf="step === 3">
+            <sqx-form-alert marginTop="0">
+                The selection of the action type cannot be changed later.
+            </sqx-form-alert>
+
             <div *ngFor="let actionType of ruleActions | sqxKeys" class="col-12 col-md-6">
                 <div class="rule-element" (click)="selectActionType(actionType)">
                     <sqx-rule-element [type]="actionType" [isSmall]="false" [element]="ruleActions[actionType]"></sqx-rule-element>
@@ -77,10 +78,12 @@
     
         <ng-container *ngIf="step === 4">
             <form [formGroup]="actionForm.form" (ngSubmit)="saveAction()">
-                <h3 class="wizard-title">{{ruleActions[actionType].display}}</h3>
+                <h3 class="wizard-title">
+                    {{actionElement.display}}
+                </h3>
 
                 <sqx-generic-action
-                    [definition]="ruleActions[actionType]"
+                    [definition]="actionElement"
                     [action]="action"
                     [actionForm]="actionForm.form"
                     [actionFormSubmitted]="actionForm.submitted | async">
@@ -98,12 +101,12 @@
             
             <ng-container *ngIf="mode !== 'Wizard' && step === 2">
                 <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()">Cancel</button>
-                <button type="submit" class="float-right btn btn-primary" (click)="saveTrigger()">Save</button>
+                <button type="submit" class="float-right btn btn-primary" (click)="saveTrigger()" *ngIf="isEditable">Save</button>
             </ng-container>
 
             <ng-container *ngIf="step === 4">
                 <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()">Cancel</button>
-                <button type="submit" class="float-right btn btn-primary" (click)="saveAction()">Save</button>
+                <button type="submit" class="float-right btn btn-primary" (click)="saveAction()" *ngIf="isEditable">Save</button>
             </ng-container>
         </div>
     </ng-container>

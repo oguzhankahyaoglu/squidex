@@ -13,7 +13,7 @@
     td {
         // Unified padding for all table cells.
         & {
-            padding: .7rem;
+            padding: .75rem;
         }
 
         // Additional padding for the first column.
@@ -95,7 +95,7 @@
     //
     &-row {
         & {
-            padding: 1rem 1.25rem;
+            padding: .75rem 1.25rem;
             background: $color-table-background;
             border: 1px solid $color-border;
             border-top: 0;
@@ -105,7 +105,7 @@
 
         // Summary row for expandable rows.
         &-summary {
-            padding: 1rem 1.25rem;
+            padding: .75rem 1.25rem;
             position: relative;
             line-height: 2.5rem;
         }
@@ -131,7 +131,7 @@
             }
 
             &-tab {
-                padding: 1rem 1.25rem 1.25rem;
+                padding: .75rem 1.25rem 1.25rem;
             }
 
             &-tabs {
@@ -144,11 +144,19 @@
     }
 
     // Footer that typically contains an add-item-form.
+    &-header,
     &-footer {
-        padding: 1rem 1.25rem;
+        padding: .75rem 1.25rem;
         background: $color-table-footer;
-        border: 1px solid $color-border;
+        border: 1px solid $color-input;
         border-bottom-width: 2px;
+    }
+
+    &-header {
+        margin-bottom: .8rem;
+    }
+
+    &-footer {
         margin-top: .8rem;
     }
 
@@ -184,39 +192,43 @@
 //
 .cell {
     &-40 {
-        width: 40%;
+        @include force-width(40%);
     }
 
     &-60 {
-        width: 60%;
+        @include force-width(60%);
     }
 
     &-select {
-        width: 50px;
+        @include force-width(50px);
     }
 
     &-label {
-        width: 100px;
+        @include force-width(100px);
     }
 
     &-separator {
-        width: 60px;
+        @include force-width(60px);
     }
 
     &-user {
-        width: 55px;
+        @include force-width(55px);
     }
 
     &-time {
-        width: 180px;
+        @include force-width(180px);
     }
 
     &-actions {
-        width: 70px;
+        @include force-width(70px);
     }
 
     &-actions-lg {
-        width: 150px;
+        @include force-width(150px);
+    }
+
+    &-content {
+        min-width: 200px;
     }
 
     &-separator,
@@ -228,6 +240,10 @@
     &-actions,
     &-actions-lg {
         text-align: right;
+    }
+
+    &-actions-left {
+        text-align: left;
     }
 }
 

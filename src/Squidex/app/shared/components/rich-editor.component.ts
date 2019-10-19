@@ -11,15 +11,14 @@ import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, E
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import {
-    AppsState,
+    ApiUrlConfig,
     AssetDto,
-    AssetsService,
-    AuthService,
-    DateTime,
+    AssetUploaderState,
     DialogModel,
     ResourceLoaderService,
     StatefulControlComponent,
-    Types
+    Types,
+    UploadCanceled
 } from '@app/shared/internal';
 
 declare var tinymce: any;
@@ -28,7 +27,7 @@ export const SQX_RICH_EDITOR_CONTROL_VALUE_ACCESSOR: any = {
     provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => RichEditorComponent), multi: true
 };
 
-const ImageTypes = [
+const ImageTypes: ReadonlyArray<any> = [
     'image/jpeg',
     'image/png',
     'image/jpg',
@@ -42,27 +41,26 @@ const ImageTypes = [
     providers: [SQX_RICH_EDITOR_CONTROL_VALUE_ACCESSOR],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RichEditorComponent extends StatefulControlComponent<any, string> implements AfterViewInit, OnDestroy {
+export class RichEditorComponent extends StatefulControlComponent<undefined, string> implements AfterViewInit, OnDestroy {
     private tinyEditor: any;
     private tinyInitTimer: any;
     private value: string;
     private isDisabled = false;
 
-    @ViewChild('editor')
-    public editor: ElementRef;
-
     @Output()
     public assetPluginClick = new EventEmitter<any>();
+
+    @ViewChild('editor', { static: false })
+    public editor: ElementRef;
 
     public assetsDialog = new DialogModel();
 
     constructor(changeDetector: ChangeDetectorRef,
-        private readonly appsState: AppsState,
-        private readonly assetsService: AssetsService,
-        private readonly authState: AuthService,
+        private readonly apiUrl: ApiUrlConfig,
+        private readonly assetUploader: AssetUploaderState,
         private readonly resourceLoader: ResourceLoaderService
     ) {
-        super(changeDetector, {});
+        super(changeDetector, undefined);
     }
 
     public ngOnDestroy() {
@@ -82,6 +80,10 @@ export class RichEditorComponent extends StatefulControlComponent<any, string> i
     }
 
     private showSelector = () => {
+        if (this.isDisabled) {
+            return;
+        }
+
         this.assetsDialog.show();
     }
 
@@ -99,13 +101,15 @@ export class RichEditorComponent extends StatefulControlComponent<any, string> i
             images_upload_handler: (blob: any, success: (url: string) => void, failed: () => void) => {
                 const file = new File([blob.blob()], blob.filename(), { lastModified: new Date().getTime() });
 
-                this.assetsService.uploadFile(this.appsState.appName, file, this.authState.user!.token, DateTime.now())
+                this.assetUploader.uploadFile(file)
                     .subscribe(asset => {
                         if (Types.is(asset, AssetDto)) {
-                            success(asset.url);
+                            success(asset.fullUrl(this.apiUrl));
                         }
-                    }, () => {
-                        failed();
+                    }, error => {
+                        if (!Types.is(error, UploadCanceled)) {
+                            failed();
+                        }
                     });
             },
 
@@ -131,11 +135,13 @@ export class RichEditorComponent extends StatefulControlComponent<any, string> i
                 });
 
                 self.tinyEditor.on('paste', (event: ClipboardEvent) => {
-                    for (let i = 0; i < event.clipboardData.items.length; i++) {
-                        const file = event.clipboardData.items[i].getAsFile();
+                    if (event.clipboardData) {
+                        for (let i = 0; i < event.clipboardData.items.length; i++) {
+                            const file = event.clipboardData.items[i].getAsFile();
 
-                        if (file && ImageTypes.indexOf(file.type) >= 0) {
-                            self.uploadFile(file);
+                            if (file && ImageTypes.indexOf(file.type) >= 0) {
+                                self.uploadFile(file);
+                            }
                         }
                     }
                 });
@@ -182,11 +188,11 @@ export class RichEditorComponent extends StatefulControlComponent<any, string> i
         }
     }
 
-    public insertAssets(assets: AssetDto[]) {
+    public insertAssets(assets: ReadonlyArray<AssetDto>) {
         let content = '';
 
-        for (let asset of assets) {
-            content += `<img src="${asset.url}" alt="${asset.fileName}" />`;
+        for (const asset of assets) {
+            content += `<img src="${asset.fullUrl(this.apiUrl)}" alt="${asset.fileName}" />`;
         }
 
         if (content.length > 0) {
@@ -196,8 +202,8 @@ export class RichEditorComponent extends StatefulControlComponent<any, string> i
         this.assetsDialog.hide();
     }
 
-    public insertFiles(files: File[]) {
-        for (let file of files) {
+    public insertFiles(files: ReadonlyArray<File>) {
+        for (const file of files) {
             this.uploadFile(file);
         }
     }
@@ -213,13 +219,15 @@ export class RichEditorComponent extends StatefulControlComponent<any, string> i
             this.tinyEditor.setContent(content);
         };
 
-        this.assetsService.uploadFile(this.appsState.appName, file, this.authState.user!.token, DateTime.now())
+        this.assetUploader.uploadFile(file)
             .subscribe(asset => {
                 if (Types.is(asset, AssetDto)) {
-                    replaceText(`<img src="${asset.url}" alt="${asset.fileName}" />`);
+                    replaceText(`<img src="${asset.fullUrl(this.apiUrl)}" alt="${asset.fileName}" />`);
                 }
-            }, () => {
-                replaceText('FAILED');
+            }, error => {
+                if (!Types.is(error, UploadCanceled)) {
+                    replaceText('FAILED');
+                }
             });
     }
 }

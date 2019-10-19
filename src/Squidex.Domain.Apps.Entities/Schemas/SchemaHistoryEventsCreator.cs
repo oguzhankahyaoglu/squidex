@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Squidex.Domain.Apps.Entities.History;
 using Squidex.Domain.Apps.Events;
 using Squidex.Domain.Apps.Events.Schemas;
-using Squidex.Infrastructure;
 using Squidex.Infrastructure.EventSourcing;
+using Squidex.Infrastructure.Reflection;
 
 namespace Squidex.Domain.Apps.Entities.Schemas
 {
@@ -19,12 +19,6 @@ namespace Squidex.Domain.Apps.Entities.Schemas
         public SchemaHistoryEventsCreator(TypeNameRegistry typeNameRegistry)
             : base(typeNameRegistry)
         {
-            AddEventMessage("SchemaCreatedEvent",
-                "created schema {[Name]}.");
-
-            AddEventMessage("ScriptsConfiguredEvent",
-                "configured script of schema {[Name]}.");
-
             AddEventMessage<SchemaFieldsReordered>(
                 "reordered fields of schema {[Name]}.");
 
@@ -83,11 +77,11 @@ namespace Squidex.Domain.Apps.Entities.Schemas
             {
                 var channel = $"schemas.{schemaEvent.SchemaId.Name}";
 
-                var result = ForEvent(@event.Payload, channel).AddParameter("Name", schemaEvent.SchemaId.Name);
+                var result = ForEvent(@event.Payload, channel).Param("Name", schemaEvent.SchemaId.Name);
 
                 if (schemaEvent is FieldEvent fieldEvent)
                 {
-                    result.AddParameter("Field", fieldEvent.FieldId.Name);
+                    result.Param("Field", fieldEvent.FieldId.Name);
                 }
 
                 return Task.FromResult(result);

@@ -8,70 +8,55 @@
 using System;
 using System.Threading.Tasks;
 using FakeItEasy;
-using Microsoft.AspNetCore.Http;
+using Squidex.Domain.Apps.Entities;
 using Squidex.Domain.Apps.Entities.Apps;
 using Squidex.Domain.Apps.Entities.Apps.Commands;
 using Squidex.Domain.Apps.Entities.Contents.Commands;
 using Squidex.Infrastructure;
 using Squidex.Infrastructure.Commands;
-using Squidex.Web.Pipeline;
 using Xunit;
 
 namespace Squidex.Web.CommandMiddlewares
 {
     public class EnrichWithAppIdCommandMiddlewareTests
     {
-        private readonly IHttpContextAccessor httpContextAccessor = A.Fake<IHttpContextAccessor>();
+        private readonly IContextProvider contextProvider = A.Fake<IContextProvider>();
         private readonly ICommandBus commandBus = A.Fake<ICommandBus>();
         private readonly NamedId<Guid> appId = NamedId.Of(Guid.NewGuid(), "my-app");
-        private readonly HttpContext httpContext = new DefaultHttpContext();
+        private readonly Context requestContext = Context.Anonymous();
         private readonly EnrichWithAppIdCommandMiddleware sut;
 
         public EnrichWithAppIdCommandMiddlewareTests()
         {
-            A.CallTo(() => httpContextAccessor.HttpContext)
-                .Returns(httpContext);
+            A.CallTo(() => contextProvider.Context)
+                .Returns(requestContext);
 
-            var appEntity = A.Fake<IAppEntity>();
+            var app = A.Fake<IAppEntity>();
 
-            A.CallTo(() => appEntity.Id).Returns(appId.Id);
-            A.CallTo(() => appEntity.Name).Returns(appId.Name);
+            A.CallTo(() => app.Id).Returns(appId.Id);
+            A.CallTo(() => app.Name).Returns(appId.Name);
 
-            httpContext.Features.Set<IAppFeature>(new AppResolver.AppFeature(appEntity));
+            requestContext.App = app;
 
-            sut = new EnrichWithAppIdCommandMiddleware(httpContextAccessor);
+            sut = new EnrichWithAppIdCommandMiddleware(contextProvider);
         }
 
         [Fact]
         public async Task Should_throw_exception_if_app_not_found()
         {
-            httpContext.Features.Set<IAppFeature>(new AppResolver.AppFeature(null));
+            requestContext.App = null;
 
             var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => sut.HandleAsync(context));
-        }
-
-        [Fact]
-        public async Task Should_do_nothing_when_context_is_null()
-        {
-            A.CallTo(() => httpContextAccessor.HttpContext)
-                .Returns(null);
-
-            var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
-
-            await sut.HandleAsync(context);
-
-            Assert.Null(command.Actor);
         }
 
         [Fact]
         public async Task Should_assign_app_id_and_name_to_app_command()
         {
             var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -81,8 +66,8 @@ namespace Squidex.Web.CommandMiddlewares
         [Fact]
         public async Task Should_assign_app_id_to_app_self_command()
         {
-            var command = new AddPattern();
-            var context = new CommandContext(command, commandBus);
+            var command = new ChangePlan();
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -92,8 +77,8 @@ namespace Squidex.Web.CommandMiddlewares
         [Fact]
         public async Task Should_not_override_app_id()
         {
-            var command = new AddPattern { AppId = Guid.NewGuid() };
-            var context = new CommandContext(command, commandBus);
+            var command = new ChangePlan { AppId = Guid.NewGuid() };
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -104,11 +89,16 @@ namespace Squidex.Web.CommandMiddlewares
         public async Task Should_not_override_app_id_and_name()
         {
             var command = new CreateContent { AppId = NamedId.Of(Guid.NewGuid(), "other-app") };
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
             Assert.NotEqual(appId, command.AppId);
+        }
+
+        private CommandContext Ctx(ICommand command)
+        {
+            return new CommandContext(command, commandBus);
         }
     }
 }

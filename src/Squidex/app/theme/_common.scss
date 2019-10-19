@@ -15,6 +15,10 @@ body {
     }
 }
 
+* {
+    @include scrollbars(8px, $color-border-dark, transparent);
+}
+
 // Common style for user email.
 .user-email {
     font-style: italic;
@@ -43,6 +47,38 @@ body {
     }
 }
 
+.cdk-drag-preview {
+    @include opacity(.7);
+
+    &.table-drag {
+        background: $color-dark-foreground;
+        border: 2px dashed darken($color-border, 5%);
+        display: table;
+
+        * {
+            display: none;
+        }
+    }
+}
+
+.cdk-drag-placeholder {
+    @include opacity(0);
+}
+
+.cdk-drag-animating {
+    @include transition(transform 250ms cubic-bezier(0, 0, .2, 1));
+}
+
+.cdk-drop-list-dragging {
+    * {
+        @include transition(transform 250ms cubic-bezier(0, 0, .2, 1));
+    }
+
+    .cdk-drag-placeholder {
+        @include transition(none);
+    }
+}
+
 .icon-bold {
     font-weight: bold;
 }
@@ -52,7 +88,7 @@ body {
 //
 .help {
     & {
-        font-size: .9rem;
+        font-size: 90%;
     }
 
     h2,
@@ -73,6 +109,10 @@ body {
     &:not([src]) {
         @include opacity(0);
     }
+}
+
+.truncate {
+    @include truncate;
 }
 
 //
@@ -104,6 +144,10 @@ body {
     .dropdown-item {
         cursor: pointer;
     }
+}
+
+.dropdown-item {
+    cursor: pointer;
 }
 
 //

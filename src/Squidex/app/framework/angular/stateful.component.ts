@@ -5,6 +5,8 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+// tslint:disable: readonly-array
+
 import { ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
@@ -12,7 +14,7 @@ import { onErrorResumeNext, skip } from 'rxjs/operators';
 
 import { Types } from './../utils/types';
 
-import { State } from '../state';
+import { State } from './../state';
 
 declare type UnsubscribeFunction = () => void;
 
@@ -37,7 +39,7 @@ export class ResourceOwner implements OnDestroy {
 
     public unsubscribeAll() {
         try {
-            for (let subscription of this.subscriptions) {
+            for (const subscription of this.subscriptions) {
                 if (Types.isFunction(subscription)) {
                     subscription();
                 } else {
@@ -52,7 +54,7 @@ export class ResourceOwner implements OnDestroy {
 
 export abstract class StatefulComponent<T = any> extends State<T> implements OnDestroy {
     private readonly subscriptions = new ResourceOwner();
-    private subscription: Subscription;
+    private readonly subscription: Subscription;
 
     constructor(
         private readonly changeDetector: ChangeDetectorRef,
@@ -74,6 +76,10 @@ export abstract class StatefulComponent<T = any> extends State<T> implements OnD
 
     protected unsubscribeAll() {
         this.subscriptions.unsubscribeAll();
+    }
+
+    protected detach() {
+        this.changeDetector.detach();
     }
 
     protected detectChanges() {
@@ -112,37 +118,6 @@ export abstract class StatefulControlComponent<T, TValue> extends StatefulCompon
     public setDisabledState(isDisabled: boolean): void {
         this.next(s => ({ ...s, isDisabled }));
     }
-
-    public abstract writeValue(obj: any): void;
-}
-
-export abstract class ExternalControlComponent<TValue> extends StatefulComponent<any> implements ControlValueAccessor {
-    private fnChanged = (v: any) => { /* NOOP */ };
-    private fnTouched = () => { /* NOOP */ };
-
-    constructor(changeDetector: ChangeDetectorRef) {
-        super(changeDetector, {});
-
-        changeDetector.detach();
-    }
-
-    public registerOnChange(fn: any) {
-        this.fnChanged = fn;
-    }
-
-    public registerOnTouched(fn: any) {
-        this.fnTouched = fn;
-    }
-
-    protected callTouched() {
-        this.fnTouched();
-    }
-
-    protected callChange(value: TValue) {
-        this.fnChanged(value);
-    }
-
-    public abstract setDisabledState(isDisabled: boolean): void;
 
     public abstract writeValue(obj: any): void;
 }

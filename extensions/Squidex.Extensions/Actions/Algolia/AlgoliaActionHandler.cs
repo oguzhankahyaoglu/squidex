@@ -5,6 +5,7 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Algolia.Search;
@@ -56,9 +57,28 @@ namespace Squidex.Extensions.Actions.Algolia
                 {
                     ruleDescription = $"Add entry to Algolia index: {action.IndexName}";
 
-                    var json = ToJson(contentEvent);
+                    JObject json;
+                    try
+                    {
+                        string jsonString;
 
-                    ruleJob.Content = JObject.Parse(json);
+                        if (!string.IsNullOrEmpty(action.Document))
+                        {
+                            jsonString = Format(action.Document, @event)?.Trim();
+                        }
+                        else
+                        {
+                            jsonString = ToJson(contentEvent);
+                        }
+
+                        json = JObject.Parse(jsonString);
+                    }
+                    catch (Exception ex)
+                    {
+                        json = new JObject(new JProperty("error", $"Invalid JSON: {ex.Message}"));
+                    }
+
+                    ruleJob.Content = json;
                     ruleJob.Content["objectID"] = contentId;
                 }
 

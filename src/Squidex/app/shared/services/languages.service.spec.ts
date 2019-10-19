@@ -12,7 +12,7 @@ import {
     ApiUrlConfig,
     LanguageDto,
     LanguagesService
-} from './../';
+} from '@app/shared/internal';
 
 describe('LanguageService', () => {
     beforeEach(() => {
@@ -34,7 +34,7 @@ describe('LanguageService', () => {
     it('should make get request to get languages',
         inject([LanguagesService, HttpTestingController], (languagesService: LanguagesService, httpMock: HttpTestingController) => {
 
-        let languages: LanguageDto[];
+        let languages: ReadonlyArray<LanguageDto>;
 
         languagesService.getLanguages().subscribe(result => {
             languages = result;

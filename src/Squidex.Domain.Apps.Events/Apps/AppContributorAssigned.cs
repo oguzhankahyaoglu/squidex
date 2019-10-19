@@ -15,5 +15,9 @@ namespace Squidex.Domain.Apps.Events.Apps
         public string ContributorId { get; set; }
 
         public string Role { get; set; }
+
+        public bool IsCreated { get; set; }
+
+        public bool IsAdded { get; set; }
     }
 }

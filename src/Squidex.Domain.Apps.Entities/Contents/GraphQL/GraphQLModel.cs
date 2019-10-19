@@ -28,9 +28,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
 {
     public sealed class GraphQLModel : IGraphModel
     {
-        private readonly Dictionary<ISchemaEntity, ContentGraphType> contentTypes = new Dictionary<ISchemaEntity, ContentGraphType>();
-        private readonly Dictionary<ISchemaEntity, ContentDataGraphType> contentDataTypes = new Dictionary<ISchemaEntity, ContentDataGraphType>();
-        private readonly Dictionary<Guid, ISchemaEntity> schemasById;
+        private readonly Dictionary<Guid, ContentGraphType> contentTypes = new Dictionary<Guid, ContentGraphType>();
         private readonly PartitionResolver partitionResolver;
         private readonly IAppEntity app;
         private readonly IGraphType assetType;
@@ -39,7 +37,11 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
 
         public bool CanGenerateAssetSourceUrl { get; }
 
-        public GraphQLModel(IAppEntity app, IEnumerable<ISchemaEntity> schemas, IGraphQLUrlGenerator urlGenerator)
+        public GraphQLModel(IAppEntity app,
+            IEnumerable<ISchemaEntity> schemas,
+            int pageSizeContents,
+            int pageSizeAssets,
+            IGraphQLUrlGenerator urlGenerator)
         {
             this.app = app;
 
@@ -50,32 +52,45 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
             assetType = new AssetGraphType(this);
             assetListType = new ListGraphType(new NonNullGraphType(assetType));
 
-            schemasById = schemas.Where(x => x.SchemaDef.IsPublished).ToDictionary(x => x.Id);
+            var allSchemas = schemas.Where(x => x.SchemaDef.IsPublished).ToList();
 
-            graphQLSchema = BuildSchema(this);
+            BuildSchemas(allSchemas);
+
+            graphQLSchema = BuildSchema(this, pageSizeContents, pageSizeAssets, allSchemas);
             graphQLSchema.RegisterValueConverter(JsonConverter.Instance);
 
             InitializeContentTypes();
         }
 
-        private static GraphQLSchema BuildSchema(GraphQLModel model)
+        private void BuildSchemas(List<ISchemaEntity> allSchemas)
         {
-            var schemas = model.schemasById.Values;
-
-            return new GraphQLSchema { Query = new AppQueriesGraphType(model, schemas) };
+            foreach (var schema in allSchemas)
+            {
+                contentTypes[schema.Id] = new ContentGraphType(schema);
+            }
         }
 
         private void InitializeContentTypes()
         {
-            foreach (var kvp in contentDataTypes)
+            foreach (var contentType in contentTypes.Values)
             {
-                kvp.Value.Initialize(this, kvp.Key);
+                contentType.Initialize(this);
             }
 
-            foreach (var kvp in contentTypes)
+            foreach (var contentType in contentTypes.Values)
             {
-                kvp.Value.Initialize(this, kvp.Key, contentDataTypes[kvp.Key]);
+                graphQLSchema.RegisterType(contentType);
             }
+        }
+
+        private static GraphQLSchema BuildSchema(GraphQLModel model, int pageSizeContents, int pageSizeAssets, List<ISchemaEntity> schemas)
+        {
+            var schema = new GraphQLSchema
+            {
+                Query = new AppQueriesGraphType(model, pageSizeContents, pageSizeAssets, schemas)
+            };
+
+            return schema;
         }
 
         public IFieldResolver ResolveAssetUrl()
@@ -131,55 +146,32 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL
             return partitionResolver(key);
         }
 
-        public (IGraphType ResolveType, ValueResolver Resolver) GetGraphType(ISchemaEntity schema, IField field)
+        public (IGraphType ResolveType, ValueResolver Resolver) GetGraphType(ISchemaEntity schema, IField field, string fieldName)
         {
-            return field.Accept(new QueryGraphTypeVisitor(schema, GetContentType, this, assetListType));
+            return field.Accept(new QueryGraphTypeVisitor(schema, contentTypes, this, assetListType, fieldName));
         }
 
-        public IGraphType GetAssetType()
+        public IObjectGraphType GetAssetType()
         {
-            return assetType;
+            return assetType as IObjectGraphType;
         }
 
-        public IGraphType GetContentDataType(Guid schemaId)
+        public IObjectGraphType GetContentType(Guid schemaId)
         {
-            var schema = schemasById.GetOrDefault(schemaId);
-
-            if (schema == null)
-            {
-                return null;
-            }
-
-            return contentDataTypes.GetOrAddNew(schema);
-        }
-
-        public IGraphType GetContentType(Guid schemaId)
-        {
-            var schema = schemasById.GetOrDefault(schemaId);
-
-            if (schema == null)
-            {
-                return null;
-            }
-
-            contentDataTypes.GetOrAdd(schema, s => new ContentDataGraphType());
-
-            return contentTypes.GetOrAdd(schema, s => new ContentGraphType());
+            return contentTypes.GetOrDefault(schemaId);
         }
 
         public async Task<(object Data, object[] Errors)> ExecuteAsync(GraphQLExecutionContext context, GraphQLQuery query)
         {
             Guard.NotNull(context, nameof(context));
 
-            var inputs = query.Variables?.ToInputs();
-
-            var result = await new DocumentExecuter().ExecuteAsync(options =>
+            var result = await new DocumentExecuter().ExecuteAsync(execution =>
             {
-                options.OperationName = query.OperationName;
-                options.UserContext = context;
-                options.Schema = graphQLSchema;
-                options.Inputs = inputs;
-                options.Query = query.Query;
+                context.Setup(execution);
+
+                execution.Schema = graphQLSchema;
+                execution.Inputs = query.Variables?.ToInputs();
+                execution.Query = query.Query;
             }).ConfigureAwait(false);
 
             return (result.Data, result.Errors?.Select(x => (object)new { x.Message, x.Locations }).ToArray());

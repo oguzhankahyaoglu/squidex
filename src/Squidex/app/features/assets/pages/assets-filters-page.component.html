@@ -28,16 +28,10 @@
 
         <hr />
 
-        <h3>Saved queries</h3>
-
-        <a class="sidebar-item" *ngFor="let query of queries.queries | async; trackBy: trackByQuery" (click)="search(query.filter)"
-            [class.active]="isSelectedQuery(query.filter)">
-            
-            {{query.name}}
-
-            <a class="sidebar-item-remove float-right" (click)="queries.remove(query.name)">
-                <i class="icon-close"></i>
-            </a>
-        </a>
+        <sqx-shared-queries types="contents"
+            [queries]="assetsQueries"
+            [queryUsed]="isQueryUsed"
+            (search)="search($event.query)">
+        </sqx-shared-queries>
     </ng-container>
 </sqx-panel>

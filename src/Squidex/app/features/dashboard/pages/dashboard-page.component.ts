@@ -6,10 +6,9 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { filter, map, switchMap } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
 
 import {
-    AppDto,
     AppsState,
     AuthService,
     DateTime,
@@ -20,7 +19,7 @@ import {
     UsagesService
 } from '@app/shared';
 
-const COLORS = [
+const COLORS: ReadonlyArray<string> = [
     ' 51, 137, 213',
     '211,  50,  50',
     '131, 211,  50',
@@ -51,8 +50,6 @@ export class DashboardPageComponent extends ResourceOwner implements OnInit {
     public chartCallsPerformance: any;
 
     public isPerformanceStacked = false;
-
-    public app = this.appsState.selectedApp.pipe(filter(x => !!x), map(x => <AppDto>x));
 
     public chartOptions = {
         responsive: true,
@@ -88,7 +85,7 @@ export class DashboardPageComponent extends ResourceOwner implements OnInit {
         maintainAspectRatio: false
     };
 
-    public history: HistoryEventDto[] = [];
+    public history: ReadonlyArray<HistoryEventDto> = [];
 
     public assetsCurrent = 0;
     public assetsMax = 0;
@@ -107,7 +104,7 @@ export class DashboardPageComponent extends ResourceOwner implements OnInit {
 
     public ngOnInit() {
         this.own(
-            this.app.pipe(
+            this.appsState.selectedApp.pipe(
                     switchMap(app => this.usagesService.getTodayStorage(app.name)))
                 .subscribe(dto => {
                     this.assetsCurrent = dto.size;
@@ -115,7 +112,7 @@ export class DashboardPageComponent extends ResourceOwner implements OnInit {
                 }));
 
         this.own(
-            this.app.pipe(
+            this.appsState.selectedApp.pipe(
                     switchMap(app => this.usagesService.getMonthCalls(app.name)))
                 .subscribe(dto => {
                     this.callsCurrent = dto.count;
@@ -123,14 +120,14 @@ export class DashboardPageComponent extends ResourceOwner implements OnInit {
                 }));
 
         this.own(
-            this.app.pipe(
+            this.appsState.selectedApp.pipe(
                     switchMap(app => this.historyService.getHistory(app.name, '')))
                 .subscribe(dto => {
                     this.history = dto;
                 }));
 
         this.own(
-            this.app.pipe(
+            this.appsState.selectedApp.pipe(
                     switchMap(app => this.usagesService.getStorageUsages(app.name, DateTime.today().addDays(-20), DateTime.today())))
                 .subscribe(dtos => {
                     const labels = createLabels(dtos);
@@ -167,7 +164,7 @@ export class DashboardPageComponent extends ResourceOwner implements OnInit {
                 }));
 
         this.own(
-            this.app.pipe(
+            this.appsState.selectedApp.pipe(
                     switchMap(app => this.usagesService.getCallsUsages(app.name, DateTime.today().addDays(-20), DateTime.today())))
                 .subscribe(dtos => {
                     const labels = createLabelsFromSet(dtos);
@@ -210,11 +207,10 @@ function label(category: string) {
     return category === '*' ? 'anonymous' : category;
 }
 
-function createLabels(dtos: { date: DateTime }[]): string[] {
+function createLabels(dtos: ReadonlyArray<{ date: DateTime }>): ReadonlyArray<string> {
     return dtos.map(d => d.date.toStringFormat('M-DD'));
 }
 
-function createLabelsFromSet(dtos: { [category: string]: { date: DateTime }[] }): string[] {
+function createLabelsFromSet(dtos: { [category: string]: ReadonlyArray<{ date: DateTime }> }): ReadonlyArray<string> {
     return createLabels(dtos[Object.keys(dtos)[0]]);
 }
-

@@ -5,7 +5,7 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
-using Squidex.Infrastructure;
+using Squidex.Infrastructure.Reflection;
 
 namespace Squidex.Domain.Apps.Events.Assets
 {
@@ -13,6 +13,8 @@ namespace Squidex.Domain.Apps.Events.Assets
     public sealed class AssetUpdated : AssetEvent
     {
         public string MimeType { get; set; }
+
+        public string FileHash { get; set; }
 
         public long FileSize { get; set; }
 

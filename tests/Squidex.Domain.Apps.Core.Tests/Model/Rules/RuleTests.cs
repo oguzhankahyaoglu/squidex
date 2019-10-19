@@ -11,7 +11,8 @@ using System.Linq;
 using FluentAssertions;
 using Squidex.Domain.Apps.Core.Rules;
 using Squidex.Domain.Apps.Core.Rules.Triggers;
-using Squidex.Infrastructure;
+using Squidex.Infrastructure.Migrations;
+using Squidex.Infrastructure.Reflection;
 using Xunit;
 
 #pragma warning disable SA1310 // Field names must not contain underscore
@@ -94,6 +95,14 @@ namespace Squidex.Domain.Apps.Core.Model.Rules
 
             Assert.True(rule_0.IsEnabled);
             Assert.False(rule_2.IsEnabled);
+        }
+
+        [Fact]
+        public void Should_replace_name_when_renaming()
+        {
+            var rule_1 = rule_0.Rename("MyName");
+
+            Assert.Equal("MyName", rule_1.Name);
         }
 
         [Fact]

@@ -5,15 +5,20 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 import {
     ContentDto,
     LanguageDto,
     ManualContentsState,
-    ModalModel,
-    SchemaDetailsDto
+    Query,
+    QueryModel,
+    queryModelFromSchema,
+    ResourceOwner,
+    SchemaDetailsDto,
+    SchemaDto,
+    SchemasState,
+    Types
 } from '@app/shared';
 
 @Component({
@@ -24,55 +29,106 @@ import {
         ManualContentsState
     ]
 })
-export class ContentsSelectorComponent implements OnInit {
+export class ContentsSelectorComponent extends ResourceOwner implements OnInit {
+    @Output()
+    public select = new EventEmitter<ReadonlyArray<ContentDto>>();
+
+    @Input()
+    public schemaIds: ReadonlyArray<string>;
+
     @Input()
     public language: LanguageDto;
 
     @Input()
-    public languages: LanguageDto[];
+    public languages: ReadonlyArray<LanguageDto>;
 
     @Input()
+    public allowDuplicates: boolean;
+
+    @Input()
+    public alreadySelected: ReadonlyArray<ContentDto>;
+
     public schema: SchemaDetailsDto;
+    public schemas: ReadonlyArray<SchemaDto> = [];
 
-    @Output()
-    public select = new EventEmitter<ContentDto[]>();
-
-    public searchModal = new ModalModel();
+    public queryModel: QueryModel;
 
     public selectedItems:  { [id: string]: ContentDto; } = {};
     public selectionCount = 0;
+    public selectedAll = false;
 
-    public isAllSelected = false;
+    public minWidth: string;
 
     constructor(
-        public readonly contentsState: ManualContentsState
+        public readonly contentsState: ManualContentsState,
+        public readonly schemasState: SchemasState,
+        private readonly changeDetector: ChangeDetectorRef
     ) {
+        super();
     }
 
     public ngOnInit() {
-        this.contentsState.schema = this.schema;
+        this.own(
+            this.contentsState.statuses
+                .subscribe(() => {
+                    this.updateModel();
+                }));
 
-        this.contentsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.schemas = this.schemasState.snapshot.schemas;
+
+        if (this.schemaIds && this.schemaIds.length > 0) {
+            this.schemas = this.schemas.filter(x => this.schemaIds.indexOf(x.id) >= 0);
+        }
+
+        this.selectSchema(this.schemas[0]);
+
+        this.changeDetector.detectChanges();
+    }
+
+    public selectSchema(selected: string | SchemaDto) {
+        if (Types.is(selected, SchemaDto)) {
+            selected = selected.id;
+        }
+
+        this.schemasState.loadSchema(selected, true)
+            .subscribe(schema => {
+                if (schema) {
+                    this.schema = schema;
+
+                    this.minWidth = `${200 + (200 * schema.referenceFields.length)}px`;
+
+                    this.contentsState.schema = schema;
+                    this.contentsState.load();
+
+                    this.updateModel();
+
+                    this.changeDetector.detectChanges();
+                }
+            });
     }
 
     public reload() {
-        this.contentsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.load(true);
     }
 
-    public search(query: string) {
-        this.contentsState.search(query).pipe(onErrorResumeNext()).subscribe();
+    public search(query: Query) {
+        this.contentsState.search(query);
     }
 
     public goNext() {
-        this.contentsState.goNext().pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.goNext();
     }
 
     public goPrev() {
-        this.contentsState.goPrev().pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.goPrev();
     }
 
     public isItemSelected(content: ContentDto) {
-        return this.selectedItems[content.id];
+        return !!this.selectedItems[content.id];
+    }
+
+    public isItemAlreadySelected(content: ContentDto) {
+        return !this.allowDuplicates && this.alreadySelected && !!this.alreadySelected.find(x => x.id === content.id);
     }
 
     public emitComplete() {
@@ -91,8 +147,10 @@ export class ContentsSelectorComponent implements OnInit {
         this.selectedItems = {};
 
         if (isSelected) {
-            for (let content of this.contentsState.snapshot.contents.values) {
-                this.selectedItems[content.id] = content;
+            for (const content of this.contentsState.snapshot.contents) {
+                if (!this.isItemAlreadySelected(content)) {
+                    this.selectedItems[content.id] = content;
+                }
             }
         }
 
@@ -111,12 +169,16 @@ export class ContentsSelectorComponent implements OnInit {
 
     private updateSelectionSummary() {
         this.selectionCount = Object.keys(this.selectedItems).length;
+        this.selectedAll = this.selectionCount === this.contentsState.snapshot.contents.length;
+    }
 
-        this.isAllSelected = this.selectionCount === this.contentsState.snapshot.contents.length;
+    private updateModel() {
+        if (this.schema) {
+            this.queryModel = queryModelFromSchema(this.schema, this.languages, this.contentsState.snapshot.statuses);
+        }
     }
 
     public trackByContent(index: number, content: ContentDto): string {
         return content.id;
     }
 }
-

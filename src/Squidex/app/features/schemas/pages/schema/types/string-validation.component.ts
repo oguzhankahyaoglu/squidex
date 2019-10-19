@@ -10,11 +10,11 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { Observable } from 'rxjs';
 
 import {
-    AppPatternDto,
+    fadeAnimation,
     FieldDto,
     hasNoValue$,
-    ImmutableArray,
     ModalModel,
+    PatternDto,
     ResourceOwner,
     RootFieldDto,
     StringFieldPropertiesDto,
@@ -24,7 +24,10 @@ import {
 @Component({
     selector: 'sqx-string-validation',
     styleUrls: ['string-validation.component.scss'],
-    templateUrl: 'string-validation.component.html'
+    templateUrl: 'string-validation.component.html',
+    animations: [
+        fadeAnimation
+    ]
 })
 export class StringValidationComponent extends ResourceOwner implements OnInit {
     @Input()
@@ -37,7 +40,7 @@ export class StringValidationComponent extends ResourceOwner implements OnInit {
     public properties: StringFieldPropertiesDto;
 
     @Input()
-    public patterns: ImmutableArray<AppPatternDto>;
+    public patterns: ReadonlyArray<PatternDto>;
 
     public showDefaultValue: Observable<boolean>;
     public showPatternMessage: boolean;
@@ -93,7 +96,7 @@ export class StringValidationComponent extends ResourceOwner implements OnInit {
         this.setPatternName();
     }
 
-    public setPattern(pattern: AppPatternDto) {
+    public setPattern(pattern: PatternDto) {
         this.patternName = pattern.name;
         this.editForm.controls['pattern'].setValue(pattern.pattern);
         this.editForm.controls['patternMessage'].setValue(pattern.message);

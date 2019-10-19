@@ -7,7 +7,7 @@
 
 import { AbstractControl, ValidatorFn, Validators } from '@angular/forms';
 
-import { DateTime } from '@app/framework/internal';
+import { DateTime, Types } from '@app/framework/internal';
 
 function isEmptyInputValue(value: any): boolean {
     return value == null || value.length === 0;
@@ -24,7 +24,7 @@ export module ValidatorsEx {
         return (control: AbstractControl) => {
             const error = inner(control);
 
-            if (error !== null && error.pattern && message) {
+            if (!!error && error.pattern && message) {
                 return { patternmessage: { requiredPattern: error.pattern.requiredPattern, actualValue: error.pattern.actualValue, message } };
             }
 
@@ -140,7 +140,7 @@ export module ValidatorsEx {
         }
     }
 
-    export function validValues<T>(values: T[]): ValidatorFn {
+    export function validValues<T>(values: ReadonlyArray<T>): ValidatorFn {
         if (!values) {
             return Validators.nullValidator;
         }
@@ -156,7 +156,7 @@ export module ValidatorsEx {
         };
     }
 
-    export function validArrayValues<T>(values: T[]): ValidatorFn {
+    export function validArrayValues<T>(values: ReadonlyArray<T>): ValidatorFn {
         if (!values) {
             return Validators.nullValidator;
         }
@@ -165,10 +165,31 @@ export module ValidatorsEx {
             const ns: T[] = control.value;
 
             if (ns) {
-                for (let n of ns) {
+                for (const n of ns) {
                     if (values.indexOf(n) < 0) {
                         return { validarrayvalues: { invalidvalue: n } };
                     }
+                }
+            }
+
+            return null;
+        };
+    }
+
+    export function uniqueStrings(): ValidatorFn {
+        return (control: AbstractControl) => {
+            if (isEmptyInputValue(control.value) || !Types.isArrayOfString(control.value)) {
+                return null;
+            }
+
+            const a: string[] = control.value;
+            const unique: { [key: string]: boolean } = {};
+
+            for (const value of a) {
+                if (unique[value]) {
+                    return { uniquestrings: false };
+                } else {
+                    unique[value] = true;
                 }
             }
 

@@ -5,7 +5,7 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2, ViewChild } from '@angular/core';
 
 import { slideRightAnimation } from '@app/framework/internal';
 
@@ -23,7 +23,8 @@ import { PanelContainerDirective } from './panel-container.directive';
 export class PanelComponent implements AfterViewInit, OnDestroy, OnInit {
     private styleWidth: string;
 
-    public renderWidth = 0;
+    @Output()
+    public close = new EventEmitter();
 
     @Input()
     public theme = 'light';
@@ -44,6 +45,9 @@ export class PanelComponent implements AfterViewInit, OnDestroy, OnInit {
     public isLazyLoaded = true;
 
     @Input()
+    public scrollX = false;
+
+    @Input()
     public showScrollbar = false;
 
     @Input()
@@ -59,10 +63,17 @@ export class PanelComponent implements AfterViewInit, OnDestroy, OnInit {
     public contentClass = '';
 
     @Input()
+    public customClose = false;
+
+    @Input()
     public sidebarClass = '';
 
-    @ViewChild('panel')
+    @ViewChild('panel', { static: false })
     public panel: ElementRef<HTMLElement>;
+
+    public renderWidth = 0;
+
+    public isViewInit = false;
 
     constructor(
         private readonly container: PanelContainerDirective,
@@ -79,24 +90,42 @@ export class PanelComponent implements AfterViewInit, OnDestroy, OnInit {
     }
 
     public ngAfterViewInit() {
+        this.isViewInit = true;
+
         this.container.invalidate();
     }
 
     public measure(size: string) {
-        if (this.styleWidth !== size) {
+        if (this.styleWidth !== size && this.isViewInit) {
             this.styleWidth = size;
 
-            this.renderer.setStyle(this.panel.nativeElement, 'width', size);
-            this.renderer.setStyle(this.panel.nativeElement, 'minWidth', this.minWidth);
-            this.renderWidth = this.panel.nativeElement.offsetWidth;
+            const element = this.panel.nativeElement;
+
+            if (element) {
+                this.renderer.setStyle(element, 'width', size);
+                this.renderer.setStyle(element, 'minWidth', this.minWidth);
+
+                this.renderWidth = element.offsetWidth;
+            }
         }
     }
 
     public arrange(left: any, layer: any) {
-        this.renderer.setStyle(this.panel.nativeElement, 'top', '0px');
-        this.renderer.setStyle(this.panel.nativeElement, 'left', left);
-        this.renderer.setStyle(this.panel.nativeElement, 'bottom', '0px');
-        this.renderer.setStyle(this.panel.nativeElement, 'position', 'absolute');
-        this.renderer.setStyle(this.panel.nativeElement, 'z-index', layer);
+        if (this.isViewInit) {
+            const element = this.panel.nativeElement;
+
+            if (element) {
+                this.renderer.setStyle(element, 'top', '0px');
+                this.renderer.setStyle(element, 'left', left);
+                this.renderer.setStyle(element, 'bottom', '0px');
+                this.renderer.setStyle(element, 'position', 'absolute');
+
+                this.renderer.setStyle(element, 'z-index', layer);
+            }
+        }
+    }
+
+    public emitClose() {
+        this.close.emit();
     }
 }

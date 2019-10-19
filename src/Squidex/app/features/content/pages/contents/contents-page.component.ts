@@ -10,13 +10,14 @@ import { onErrorResumeNext, switchMap, tap } from 'rxjs/operators';
 
 import {
     AppLanguageDto,
-    AppsState,
     ContentDto,
     ContentsState,
-    ImmutableArray,
     LanguagesState,
     ModalModel,
     Queries,
+    Query,
+    QueryModel,
+    queryModelFromSchema,
     ResourceOwner,
     SchemaDetailsDto,
     SchemasState,
@@ -32,26 +33,29 @@ import { DueTimeSelectorComponent } from './../../shared/due-time-selector.compo
 })
 export class ContentsPageComponent extends ResourceOwner implements OnInit {
     public schema: SchemaDetailsDto;
-    public schemaQueries: Queries;
 
     public searchModal = new ModalModel();
 
     public selectedItems:  { [id: string]: boolean; } = {};
+    public selectedAll = false;
     public selectionCount = 0;
+    public selectionCanDelete = false;
 
-    public canUnpublish = false;
-    public canPublish = false;
+    public nextStatuses: { [name: string]: string } = {};
 
     public language: AppLanguageDto;
-    public languages: ImmutableArray<AppLanguageDto>;
+    public languageMaster: AppLanguageDto;
+    public languages: ReadonlyArray<AppLanguageDto>;
 
-    public isAllSelected = false;
+    public queryModel: QueryModel;
+    public queries: Queries;
 
-    @ViewChild('dueTimeSelector')
+    public minWidth: string;
+
+    @ViewChild('dueTimeSelector', { static: false })
     public dueTimeSelector: DueTimeSelectorComponent;
 
     constructor(
-        public readonly appsState: AppsState,
         public readonly contentsState: ContentsState,
         private readonly languagesState: LanguagesState,
         private readonly schemasState: SchemasState,
@@ -66,10 +70,20 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
                 .subscribe(schema => {
                     this.resetSelection();
 
-                    this.schema = schema!;
-                    this.schemaQueries = new Queries(this.uiState, `schemas.${this.schema.name}`);
+                    this.schema = schema;
 
-                    this.contentsState.init().pipe(onErrorResumeNext()).subscribe();
+                    this.minWidth = `${300 + (200 * this.schema.listFields.length)}px`;
+
+                    this.contentsState.load();
+
+                    this.updateQueries();
+                    this.updateModel();
+                }));
+
+        this.own(
+            this.contentsState.statuses
+                .subscribe(() => {
+                    this.updateModel();
                 }));
 
         this.own(
@@ -82,59 +96,38 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
             this.languagesState.languages
                 .subscribe(languages => {
                     this.languages = languages.map(x => x.language);
-                    this.language = this.languages.at(0);
+                    this.language = this.languages[0];
+                    this.languageMaster = this.languages.find(x => x.isMaster)!;
+
+                    this.updateModel();
                 }));
     }
 
     public reload() {
-        this.contentsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.load(true);
     }
 
     public deleteSelected() {
-        this.contentsState.deleteMany(this.selectItems()).pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.deleteMany(this.selectItems());
     }
 
     public delete(content: ContentDto) {
-        this.contentsState.deleteMany([content]).pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.deleteMany([content]);
     }
 
-    public publish(content: ContentDto) {
-        this.changeContentItems([content], 'Publish');
+    public changeStatus(content: ContentDto, status: string) {
+        this.changeContentItems([content], status);
     }
 
-    public publishSelected() {
-        this.changeContentItems(this.selectItems(c => c.status !== 'Published'), 'Publish');
-    }
-
-    public unpublish(content: ContentDto) {
-        this.changeContentItems([content], 'Unpublish');
-    }
-
-    public unpublishSelected() {
-        this.changeContentItems(this.selectItems(c => c.status === 'Published'), 'Unpublish');
-    }
-
-    public archive(content: ContentDto) {
-        this.changeContentItems([content], 'Archive');
-    }
-
-    public archiveSelected() {
-        this.changeContentItems(this.selectItems(), 'Archive');
-    }
-
-    public restore(content: ContentDto) {
-        this.changeContentItems([content], 'Restore');
-    }
-
-    public restoreSelected() {
-        this.changeContentItems(this.selectItems(), 'Restore');
+    public changeSelectedStatus(status: string) {
+        this.changeContentItems(this.selectItems(c => c.status !== status), status);
     }
 
     public clone(content: ContentDto) {
-        this.contentsState.create(content.dataDraft, false).pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.create(content.dataDraft, false);
     }
 
-    private changeContentItems(contents: ContentDto[], action: string) {
+    private changeContentItems(contents: ReadonlyArray<ContentDto>, action: string) {
         if (contents.length === 0) {
             return;
         }
@@ -148,20 +141,16 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
             .subscribe();
     }
 
-    public goArchive(isArchive: boolean) {
-        this.contentsState.goArchive(isArchive).pipe(onErrorResumeNext()).subscribe();
-    }
-
     public goPrev() {
-        this.contentsState.goPrev().pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.goPrev();
     }
 
     public goNext() {
-        this.contentsState.goNext().pipe(onErrorResumeNext()).subscribe();
+        this.contentsState.goNext();
     }
 
-    public search(query: string) {
-        this.contentsState.search(query).pipe(onErrorResumeNext()).subscribe();
+    public search(query: Query) {
+        this.contentsState.search(query);
     }
 
     public selectLanguage(language: AppLanguageDto) {
@@ -173,7 +162,7 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
     }
 
     private selectItems(predicate?: (content: ContentDto) => boolean) {
-        return this.contentsState.snapshot.contents.values.filter(c => this.selectedItems[c.id] && (!predicate || predicate(c)));
+        return this.contentsState.snapshot.contents.filter(c => this.selectedItems[c.id] && (!predicate || predicate(c)));
     }
 
     public selectItem(content: ContentDto, isSelected: boolean) {
@@ -192,7 +181,7 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
         this.selectedItems = {};
 
         if (isSelected) {
-            for (let content of this.contentsState.snapshot.contents.values) {
+            for (let content of this.contentsState.snapshot.contents) {
                 this.selectedItems[content.id] = true;
             }
         }
@@ -214,28 +203,45 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
     }
 
     private updateSelectionSummary() {
-        this.isAllSelected = this.contentsState.snapshot.contents.length > 0;
-
+        this.selectedAll = this.contentsState.snapshot.contents.length > 0;
         this.selectionCount = 0;
+        this.selectionCanDelete = true;
+        this.nextStatuses = {};
 
-        this.canPublish = true;
-        this.canUnpublish = true;
+        for (let content of this.contentsState.snapshot.contents) {
+            for (const info of content.statusUpdates) {
+                this.nextStatuses[info.status] = info.color;
+            }
+        }
 
-        for (let content of this.contentsState.snapshot.contents.values) {
+        for (let content of this.contentsState.snapshot.contents) {
             if (this.selectedItems[content.id]) {
                 this.selectionCount++;
 
-                if (content.status !== 'Published') {
-                    this.canUnpublish = false;
+                for (const action in this.nextStatuses) {
+                    if (!content.statusUpdates) {
+                        delete this.nextStatuses[action];
+                    }
                 }
 
-                if (content.status === 'Published') {
-                    this.canPublish = false;
+                if (!content.canDelete) {
+                    this.selectionCanDelete = false;
                 }
             } else {
-                this.isAllSelected = false;
+                this.selectedAll = false;
             }
         }
     }
-}
 
+    private updateQueries() {
+        if (this.schema) {
+            this.queries = new Queries(this.uiState, `schemas.${this.schema.name}`);
+        }
+    }
+
+    private updateModel() {
+        if (this.schema && this.languages) {
+            this.queryModel = queryModelFromSchema(this.schema, this.languages, this.contentsState.snapshot.statuses);
+        }
+    }
+}

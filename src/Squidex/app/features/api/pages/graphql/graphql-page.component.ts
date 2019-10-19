@@ -22,11 +22,11 @@ import { AppsState, GraphQlService } from '@app/shared';
     templateUrl: './graphql-page.component.html'
 })
 export class GraphQLPageComponent implements AfterViewInit {
-    @ViewChild('graphiQLContainer')
+    @ViewChild('graphiQLContainer', { static: false })
     public graphiQLContainer: ElementRef;
 
     constructor(
-        public readonly appsState: AppsState,
+        private readonly appsState: AppsState,
         private readonly graphQlService: GraphQlService
     ) {
     }
@@ -46,4 +46,3 @@ export class GraphQLPageComponent implements AfterViewInit {
         return this.graphQlService.query(this.appsState.appName, params).pipe(catchError(response => of(response.error))).toPromise();
     }
 }
-

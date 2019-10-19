@@ -1,11 +1,208 @@
 # Changelog
 
+## 3.4.0-beta1 - 2019-10-08
+
+### Features
+
+* **Grain**: Fixed grain indices.
+* **Content**: Multiple schemas allowed for references.
+* **UI**: Inline stars editor.
+* **UI**: Get rid of immutable arrays.
+* **UI**: Hide date buttons based on settings.
+* **UI**: Updated several packages.
+* **UI**: Improvement to contributor page.
+* **Migration**: Better cancellation support for migration.
+* **Rules**: Custom payload for webhook and Algolia.
+
+### Bugfixes
+
+* **UI**: Fix references dropdown in query UI for localized values.
+* **UI**: Fixed the unique checkbox in schema editor.
+* **UI**: Fixed default date handling.
+* **App**: Fix plan settings.
+* **Logging**: Use explicit thread for logging to console.
+
+## 3.3.0 - 2019-09-08
+
+### Features
+
+* **UI**: Autosaving for content in local store.
+* **UI**: Labels, descriptions and icons for contents.
+* **UI**: Bulk import for contributors.
+* **UI**: Pagination and search for contributors.
+* **UI**: Improve file size for generated javascript bundles.
+* **Rules**: Configurable default timeout for rule execution.
+* **Assets**: Use asset url with slug when adding assets to rich text or markdown.
+* **API**: Client per user.
+* **API**: Limits for number of living content grains.
+
+### Bugfixes
+
+* **UI**: Fix for dynamic chunk loading.
+* **UI**: Styling fixes for date editor.
+* **UI**: Improvement and fixes for checking unsaving changes.
+* **API**: Fixes hateaos links for nested schema fields.
+
+## 3.2.2 - 2019-08-20
+
+### Bugfixes
+
+* **API**: Fixed a bug that prevented json response for field endpoint to be serialized correctly.
+* **UI**: Layout fix for clients page.
+
+## 3.2.1 - 2019-08-19
+
+### Bugfixes
+
+* **MongoDB**: Fix index creation for Orleans tables.
+* **MongoDB**: Fixes in OpenAPI definition.
+
+## 3.2.0 - 2019-08-19
+
+### Features
+
+* **Contents**: Improved reference dropdown selector.
+* **API**: Json queries for new query editor.
+* **API**: Moved from Swagger2 to OpenAPI for generated documentation.
+* **API**: Improved GraphQL error handling.
+* **API**: Setting to show PII (Personally Identifiable Information) in logs.
+* **UI**: Query editor for json queries.
+* **UI**: Horizontal scrolling in UI.
+* **Assets**: Pass in time to cache to asset API.
+* **Assets**: Shorter asset fields and asset migration.
+* **Rules**: Kafka rule action, thanks to https://github.com/sauravvijay
+* **MongoDB**: Removed support for CosmosDB and DocumentDB due to high costs.
+
+## 3.1.0 - 2019-07-25
+
+### Features
+
+* **Contents**: Include reference fields to indicate which fields to show when a content item is referenced by another content.
+* **Contents**: Resolve references for content list when max items is set to 1.
+* **UI**: Scrollbars improved and designed.
+
+### Bugfixes
+
+* **UI**: Multiple fixes for modal dialogs.
+
+## 3.0.0 - 2019-07-11
+
+This version contains many major breaking changes. Please read: https://docs.squidex.io/next/02-api-compatibility
+
+### Features
+
+* **Contents**: Workflow system
+* **API**: Hateoas
+* **API**: Info endpoint
+* **Configuration**: A lot of configuration settings to tweak some aspects of the UI.
+
+## v3.0.0-beta2 - 2019-06-29
+
+### Features
+
+* **Contents**: Editor for custom workflows.
+
+## v2.2.0 - 2019-06-29
+
+### Features
+
+* **Login**: Redirect to authentication provider automatically if only one provider is active.
+
+### Bugfixes
+
+* **GraphQL**: Fix a bug in styles that prevented to autocomplete to show properly
+
+## v3.0.0-beta1 - 2019-06-24
+
+This version contains many major breaking changes. Please read: https://docs.squidex.io/next/02-api-compatibility
+
+## v2.1.0 - 2019-06-22
+
+### Features
+
+* **Assets**: Parameter to prevent download in Browser.
+* **Assets**: FTP asset store.
+* **GraphQL**: Logging for field resolvers
+* **GraphQL**: Performance optimizations for asset fields and references with DataLoader.
+* **MongoDB**: Performance optimizations.
+* **MongoDB**: Support for AWS DocumentDB.
+* **Schemas**: Separator field.
+* **Schemas**: Setting to prevent duplicate references.
+* **UI**: Improved styling of DateTime editor.
+* **UI**: Custom Editors: Provide all values.
+* **UI**: Custom Editors: Provide context with user information and auth token.
+* **UI**: Filter by status.
+* **UI**: Dropdown field for references.
+* **Users**: Email notifications when contributors is added.
+
+### Bugfixes
+
+* **Contents**: Fix for scheduled publishing.
+* **GraphQL**: Fix query parameters for assets.
+* **GraphQL**: Fix for duplicate field names in GraphQL.
+* **GraphQL**: Fix for invalid field names.
+* **Plans**: Fix when plans reset and extra events.
+* **UI**: Unify slugify in Frontend and Backend.
+
+## v2.0.5 - 2019-04-21
+
+### Features
+
+* **UI**: Sort content by clicking on the table header.
+
+### Bugfixes
+
+* **UI**: Fix publish button in content context menu.
+
+## v2.0.4 - 2019-04-20
+
+### Features
+
+* **UI**: Link to go from a referenced content to the corresponding edit screen.
+* **Contents**: Also query by items in array fields.
+
+You can use the following syntax for array items:
+
+    $filter=data/iv/hobbies/name eq 'Programming'
+
+## v2.0.3 - 2019-04-19
+
+### Bugfixes
+
+* **UI**: Serveral essential bugfixes for radio buttons in Angular forms.
+
+## v2.0.2 - 2019-04-16
+
+### Bugfixes
+
+* **Fulltext**: Workaround for a clustering bug that prevented the text indexer to run properly in cluster mode.
+* **Fulltext**: Big performance improvement for text indexer.
+* **Identity-Server**: Use special callback path for internal odic to not interfere with external oidc and Orleans Dashboard.
+
+## v2.0.1 - 2019-04-06
+
+### Bugfixes
+
+* **Assets**: Fix the naming of assets that has changed since last version.
+* **Assets**: Fix when overriding assets that do now exists.
+* **Contents**: Fixed a bug that made the text indexer crash when an content was published that had no text.
+
+### Features
+
+* **Assets**: Introduces slugs for assets and the option to query assets by slugs.
+* **Assets**: Dialogs to edit slugs.
+* **UI**: Ability to host Squidex in a virtual directory.
+
+### Breaking Changes
+
+* This release sets the clustering mode to 'Development' which means it is turned off. This makes operations simpler for most users.
+
 ## v2.0.0 - 2018-04-01
 
 ### Features
 
 * **UI**: Automatic generation of UI for rule actions.
-* **Content**: Improved full text engine with `Lucene.NET`.
+* **Contents**: Improved full text engine with `Lucene.NET`.
 * **Server**: Plugin system.
 * **Server**: Performance improvement for event handling.
 
@@ -77,8 +274,8 @@ The full text index is populated in the background and it can therefore take a f
 * **Users**: Invite users to an app even if they do not have an account yet.
 * **Users**: Github authentication.
 * **Client Library**: Integrated autogenerated management library.
-* **Content**: Preview urls for schemas.
-* **Content**: Button  to show all input fields for localized fields.
+* **Contents**: Preview urls for schemas.
+* **Contents**: Button  to show all input fields for localized fields.
 * **Scripting**: Access to user roles.
 
 ### Bugfixes
@@ -187,7 +384,7 @@ Various small bugfixes for UI and API.
 ### Bugfixes
 
 * **UI**: Nested fields got wrong ids and names and could not be saved.
-* **Content**: Ensure that the content api returns content in correct order when querying by ids.
+* **Contents**: Ensure that the content api returns content in correct order when querying by ids.
 
 ## v1.7.0 - 2018-06-25
 
@@ -227,7 +424,7 @@ Various small bugfixes for UI and API.
 
 ### Features
 
-* **Content**: Allow to save content updates as draft.
+* **Contents**: Allow to save content updates as draft.
 * **Schemas**: Create folders to group schemas.
 * **UI**: Increased the search input.
 * **UI**: Plugin system for content editors.
@@ -264,7 +461,7 @@ Various small bugfixes for UI and API.
 ### Features
 
 * **EventStore**: Event metadata are stored as json objects in MongoDB now and you cacn query by metadata.
-* **Content**: Updated to state can be scheduled, e.g. to publish them.
+* **Contents**: Updated to state can be scheduled, e.g. to publish them.
 
 > This releases will run a migration, which might take a while and also effects the events. We recommend to make a backup first.
 
@@ -293,12 +490,12 @@ Various small bugfixes for UI and API.
 
 ### Features
 
-* **Content**: Slugify function for custom scripts.
+* **Contents**: Slugify function for custom scripts.
 
 ### Bugfixes
 
 * **Migration**: Assets and schemas were not removed before recreation.
-* **Content**: OData queries only worked for data fields.
+* **Contents**: OData queries only worked for data fields.
 * **Assets**: OData queries did not work at all and included too many fields (e.g. AppId, Id).
 
 ## v1.1.4 - 2018-02-03

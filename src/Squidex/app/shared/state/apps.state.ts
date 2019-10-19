@@ -7,29 +7,29 @@
 
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { distinctUntilChanged, map, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 
 import {
+    defined,
     DialogService,
-    ImmutableArray,
-    notify,
-    State
+    shareSubscribed,
+    State,
+    Types
 } from '@app/framework';
 
 import {
     AppDto,
     AppsService,
-    CreateAppDto
+    CreateAppDto,
+    UpdateAppDto
 } from './../services/apps.service';
 
 interface Snapshot {
-    apps: ImmutableArray<AppDto>;
+    // All apps, loaded once.
+    apps: ReadonlyArray<AppDto>;
 
+    // The selected app.
     selectedApp: AppDto | null;
-}
-
-function sameApp(lhs: AppDto, rhs?: AppDto): boolean {
-    return lhs === rhs || (!!lhs && !!rhs && lhs.id === rhs.id);
 }
 
 @Injectable()
@@ -38,19 +38,24 @@ export class AppsState extends State<Snapshot> {
         return this.snapshot.selectedApp ? this.snapshot.selectedApp.name : '';
     }
 
-    public selectedApp =
-        this.changes.pipe(map(s => s.selectedApp),
-            distinctUntilChanged(sameApp));
+    public get appDisplayName() {
+        return this.snapshot.selectedApp ? this.snapshot.selectedApp.displayName : '';
+    }
 
     public apps =
-        this.changes.pipe(map(s => s.apps),
-            distinctUntilChanged());
+        this.project(s => s.apps);
+
+    public selectedAppOrNull =
+        this.project(s => s.selectedApp);
+
+    public selectedApp =
+        this.selectedAppOrNull.pipe(defined());
 
     constructor(
         private readonly appsService: AppsService,
         private readonly dialogs: DialogService
     ) {
-        super({ apps: ImmutableArray.empty(), selectedApp: null });
+        super({ apps: [], selectedApp: null });
     }
 
     public select(name: string | null): Observable<AppDto | null> {
@@ -67,37 +72,80 @@ export class AppsState extends State<Snapshot> {
 
     public load(): Observable<any> {
         return this.appsService.getApps().pipe(
-            tap((dto: AppDto[]) => {
+            tap(apps => {
                 this.next(s => {
-                    const apps = ImmutableArray.of(dto);
-
                     return { ...s, apps };
                 });
-            }));
+            }),
+            shareSubscribed(this.dialogs));
     }
 
     public create(request: CreateAppDto): Observable<AppDto> {
         return this.appsService.postApp(request).pipe(
-            tap(dto => {
+            tap(created => {
                 this.next(s => {
-                    const apps = s.apps.push(dto).sortByStringAsc(x => x.name);
+                    const apps = [...s.apps, created].sortedByString(x => x.displayName);
 
                     return { ...s, apps };
                 });
-            }));
+            }),
+            shareSubscribed(this.dialogs, { silent: true }));
     }
 
-    public delete(name: string): Observable<any> {
-        return this.appsService.deleteApp(name).pipe(
+    public update(app: AppDto, request: UpdateAppDto): Observable<AppDto> {
+        return this.appsService.putApp(app, request, app.version).pipe(
+            tap(updated => {
+                this.replaceApp(updated, app);
+            }),
+            shareSubscribed(this.dialogs, { silent: true }));
+    }
+
+    public removeImage(app: AppDto): Observable<AppDto> {
+        return this.appsService.deleteAppImage(app, app.version).pipe(
+            tap(updated => {
+                this.replaceApp(updated, app);
+            }),
+            shareSubscribed(this.dialogs, { silent: true }));
+    }
+
+    public uploadImage(app: AppDto, file: File): Observable<number | AppDto> {
+        return this.appsService.postAppImage(app, file, app.version).pipe(
+            tap(updated => {
+                if (Types.is(updated, AppDto)) {
+                    this.replaceApp(updated, app);
+                }
+            }),
+            shareSubscribed(this.dialogs));
+    }
+
+    public delete(app: AppDto): Observable<any> {
+        return this.appsService.deleteApp(app).pipe(
             tap(() => {
                 this.next(s => {
-                    const apps = s.apps.filter(x => x.name !== name);
+                    const apps = s.apps.filter(x => x.name !== app.name);
 
-                    const selectedApp = s.selectedApp && s.selectedApp.name === name ? null : s.selectedApp;
+                    const selectedApp =
+                        s.selectedApp &&
+                        s.selectedApp.id === app.id ?
+                        null :
+                        s.selectedApp;
 
                     return { ...s, apps, selectedApp };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
+    }
+
+    private replaceApp(updated: AppDto, app: AppDto) {
+        this.next(s => {
+            const apps = s.apps.replaceBy('id', updated);
+
+            const selectedApp = s.selectedApp &&
+                s.selectedApp.id === app.id ?
+                updated :
+                s.selectedApp;
+
+            return { ...s, apps, selectedApp };
+        });
     }
 }

@@ -8,7 +8,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { merge, Observable, timer } from 'rxjs';
-import { delay, onErrorResumeNext, switchMap } from 'rxjs/operators';
+import { delay } from 'rxjs/operators';
 
 import {
     allParams,
@@ -16,7 +16,8 @@ import {
     HistoryChannelUpdated,
     HistoryEventDto,
     HistoryService,
-    MessageBus
+    MessageBus,
+    switchSafe
 } from '@app/shared/internal';
 
 @Component({
@@ -28,12 +29,12 @@ import {
 export class HistoryComponent {
     private readonly channel = this.calculateChannel();
 
-    public events: Observable<HistoryEventDto[]> =
+    public events: Observable<ReadonlyArray<HistoryEventDto>> =
         merge(
             timer(0, 10000),
             this.messageBus.of(HistoryChannelUpdated).pipe(delay(1000))
         ).pipe(
-            switchMap(() => this.historyService.getHistory(this.appsState.appName, this.channel).pipe(onErrorResumeNext())));
+            switchSafe(() => this.historyService.getHistory(this.appsState.appName, this.channel)));
 
     constructor(
         private readonly appsState: AppsState,
@@ -49,7 +50,7 @@ export class HistoryComponent {
         if (channel) {
             const params = allParams(this.route);
 
-            for (let key in params) {
+            for (const key in params) {
                 if (params.hasOwnProperty(key)) {
                     const value = params[key];
 

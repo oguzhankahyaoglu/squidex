@@ -60,7 +60,7 @@ namespace Squidex.Domain.Apps.Entities.Rules
 
             var result = await sut.ExecuteAsync(CreateRuleCommand(command));
 
-            result.ShouldBeEquivalent(EntityCreatedResult.Create(Id, 0));
+            result.ShouldBeEquivalent(sut.Snapshot);
 
             Assert.Equal(AppId, sut.Snapshot.AppId.Id);
 
@@ -87,9 +87,11 @@ namespace Squidex.Domain.Apps.Entities.Rules
             Assert.Same(command.Trigger, sut.Snapshot.RuleDef.Trigger);
             Assert.Same(command.Action, sut.Snapshot.RuleDef.Action);
 
+            Assert.Equal(command.Name, sut.Snapshot.RuleDef.Name);
+
             LastEvents
                 .ShouldHaveSameEvents(
-                    CreateRuleEvent(new RuleUpdated { Trigger = command.Trigger, Action = command.Action })
+                    CreateRuleEvent(new RuleUpdated { Trigger = command.Trigger, Action = command.Action, Name = "NewName" })
                 );
         }
 
@@ -110,7 +112,7 @@ namespace Squidex.Domain.Apps.Entities.Rules
 
             var result = await sut.ExecuteAsync(CreateRuleCommand(command));
 
-            result.ShouldBeEquivalent(new EntitySavedResult(2));
+            result.ShouldBeEquivalent(sut.Snapshot);
 
             Assert.True(sut.Snapshot.RuleDef.IsEnabled);
 
@@ -129,7 +131,7 @@ namespace Squidex.Domain.Apps.Entities.Rules
 
             var result = await sut.ExecuteAsync(CreateRuleCommand(command));
 
-            result.ShouldBeEquivalent(new EntitySavedResult(1));
+            result.ShouldBeEquivalent(sut.Snapshot);
 
             Assert.False(sut.Snapshot.RuleDef.IsEnabled);
 
@@ -214,7 +216,7 @@ namespace Squidex.Domain.Apps.Entities.Rules
                 Url = new Uri("https://squidex.io/v2")
             };
 
-            return new UpdateRule { Trigger = newTrigger, Action = newAction };
+            return new UpdateRule { Trigger = newTrigger, Action = newAction, Name = "NewName" };
         }
     }
 }

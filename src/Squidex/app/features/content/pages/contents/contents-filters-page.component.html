@@ -4,25 +4,29 @@
     </ng-container>
 
     <ng-container content>
-        <a class="sidebar-item" *ngFor="let query of schemaQueries.defaultQueries; trackBy: trackByTag" (click)="search(query.filter)"
-            [class.active]="isSelectedQuery(query.filter)">
-            {{query.name}}
+        <a class="sidebar-item" *ngFor="let default of schemaQueries.defaultQueries; trackBy: trackByQuery" (click)="search(default.query)"
+            [class.active]="isQueryUsed(default)">
+            {{default.name}}
         </a>
 
         <hr />
 
         <div class="sidebar-section">
-            <h3>Saved queries</h3>
+            <h3>Status Queries</h3>
 
-            <a class="sidebar-item" *ngFor="let query of schemaQueries.queries | async; trackByQuery" (click)="search(query.filter)"
-                [class.active]="isSelectedQuery(query.filter)">
+            <a class="sidebar-item status" *ngFor="let status of contentsState.statusQueries | async; trackBy: trackByQuery" (click)="search(status.query)"
+                [class.active]="isQueryUsed(status)">
                 
-                {{query.name}}
-                
-                <a class="sidebar-item-remove float-right" (click)="schemaQueries.remove(query.name)">
-                    <i class="icon-close"></i>
-                </a>
+                <i class="icon-circle" [style.color]="status.color"></i> {{status.name}}
             </a>
         </div>
+
+        <hr />
+
+        <sqx-shared-queries types="contents"
+            [queries]="schemaQueries"
+            [queryUsed]="isQueryUsed"
+            (search)="search($event.query)">
+        </sqx-shared-queries>
     </ng-container>
 </sqx-panel>

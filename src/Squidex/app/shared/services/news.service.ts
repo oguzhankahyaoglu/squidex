@@ -22,7 +22,7 @@ export class FeatureDto {
 
 export class FeaturesDto {
     constructor(
-        public readonly features: FeatureDto[],
+        public readonly features: ReadonlyArray<FeatureDto>,
         public readonly version: number
     ) {
     }
@@ -40,19 +40,19 @@ export class NewsService {
         const url = this.apiUrl.buildUrl(`api/news/features?version=${version}`);
 
         return this.http.get<any>(url).pipe(
-                map(response => {
-                    const items: any[] = response.features;
+            map(body => {
+                const items: any[] = body.features;
 
-                    return new FeaturesDto(
-                        items.map(item => {
-                            return new FeatureDto(
-                                item.name,
-                                item.text
-                            );
-                        }),
-                        response.version
-                    );
-                }),
-                pretifyError('Failed to load features. Please reload.'));
+                const features = new FeaturesDto(
+                    items.map(item =>
+                        new FeatureDto(
+                            item.name,
+                            item.text)
+                    ),
+                    body.version);
+
+                return features;
+            }),
+            pretifyError('Failed to load features. Please reload.'));
     }
 }

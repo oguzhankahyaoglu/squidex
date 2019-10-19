@@ -6,7 +6,10 @@
 // ==========================================================================
 
 using System;
+using System.Diagnostics;
 using Squidex.Infrastructure.Json;
+using Squidex.Infrastructure.Migrations;
+using Squidex.Infrastructure.Reflection;
 
 namespace Squidex.Infrastructure.EventSourcing
 {
@@ -33,6 +36,11 @@ namespace Squidex.Infrastructure.EventSourcing
             if (payloadObj is IMigrated<IEvent> migratedEvent)
             {
                 payloadObj = migratedEvent.Migrate();
+
+                if (ReferenceEquals(migratedEvent, payloadObj))
+                {
+                    Debug.WriteLine("Migration should return new event.");
+                }
             }
 
             var envelope = new Envelope<IEvent>(payloadObj, eventData.Headers);
@@ -47,6 +55,11 @@ namespace Squidex.Infrastructure.EventSourcing
             if (migrate && eventPayload is IMigrated<IEvent> migratedEvent)
             {
                 eventPayload = migratedEvent.Migrate();
+
+                if (ReferenceEquals(migratedEvent, eventPayload))
+                {
+                    Debug.WriteLine("Migration should return new event.");
+                }
             }
 
             var payloadType = typeNameRegistry.GetName(eventPayload.GetType());

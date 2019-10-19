@@ -5,6 +5,8 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
+using System;
+using FluentFTP;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
@@ -32,14 +34,14 @@ namespace Squidex.Config.Domain
                     var path = config.GetRequiredValue("assetStore:folder:path");
 
                     services.AddSingletonAs(c => new FolderAssetStore(path, c.GetRequiredService<ISemanticLog>()))
-                        .AsOptional<IAssetStore>();
+                        .As<IAssetStore>();
                 },
                 ["GoogleCloud"] = () =>
                 {
                     var bucketName = config.GetRequiredValue("assetStore:googleCloud:bucket");
 
                     services.AddSingletonAs(c => new GoogleCloudAssetStore(bucketName))
-                        .AsOptional<IAssetStore>();
+                        .As<IAssetStore>();
                 },
                 ["AzureBlob"] = () =>
                 {
@@ -47,7 +49,7 @@ namespace Squidex.Config.Domain
                     var containerName = config.GetRequiredValue("assetStore:azureBlob:containerName");
 
                     services.AddSingletonAs(c => new AzureBlobAssetStore(connectionString, containerName))
-                        .AsOptional<IAssetStore>();
+                        .As<IAssetStore>();
                 },
                 ["MongoDb"] = () =>
                 {
@@ -67,7 +69,25 @@ namespace Squidex.Config.Domain
 
                             return new MongoGridFsAssetStore(gridFsbucket);
                         })
-                        .AsOptional<IAssetStore>();
+                        .As<IAssetStore>();
+                },
+                ["Ftp"] = () =>
+                {
+                    var serverHost = config.GetRequiredValue("assetStore:ftp:serverHost");
+                    var serverPort = config.GetOptionalValue<int>("assetStore:ftp:serverPort", 21);
+
+                    var username = config.GetRequiredValue("assetStore:ftp:username");
+                    var password = config.GetRequiredValue("assetStore:ftp:password");
+
+                    var path = config.GetOptionalValue("assetStore:ftp:path", "/");
+
+                    services.AddSingletonAs(c =>
+                        {
+                            var factory = new Func<FtpClient>(() => new FtpClient(serverHost, serverPort, username, password));
+
+                            return new FTPAssetStore(factory, path, c.GetRequiredService<ISemanticLog>());
+                        })
+                        .As<IAssetStore>();
                 }
             });
 

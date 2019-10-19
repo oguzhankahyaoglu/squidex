@@ -6,6 +6,7 @@
 // ==========================================================================
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using Squidex.Infrastructure.Security;
 using Squidex.Shared.Identity;
@@ -22,6 +23,8 @@ namespace Squidex.Domain.Users
 
         public string Email { get; set; }
 
+        public bool? Invited { get; set; }
+
         public bool? Consent { get; set; }
 
         public bool? ConsentForEmails { get; set; }
@@ -30,7 +33,12 @@ namespace Squidex.Domain.Users
 
         public PermissionSet Permissions { get; set; }
 
-        public IEnumerable<Claim> ToClaims()
+        public List<Claim> ToClaims(bool initial)
+        {
+            return ToClaimsCore(initial).ToList();
+        }
+
+        private IEnumerable<Claim> ToClaimsCore(bool initial)
         {
             if (!string.IsNullOrWhiteSpace(DisplayName))
             {
@@ -47,6 +55,11 @@ namespace Squidex.Domain.Users
                 yield return new Claim(SquidexClaimTypes.Hidden, Hidden.ToString());
             }
 
+            if (Invited.HasValue)
+            {
+                yield return new Claim(SquidexClaimTypes.Invited, Invited.ToString());
+            }
+
             if (Consent.HasValue)
             {
                 yield return new Claim(SquidexClaimTypes.Consent, Consent.ToString());
@@ -59,6 +72,11 @@ namespace Squidex.Domain.Users
 
             if (Permissions != null)
             {
+                if (!initial)
+                {
+                    yield return new Claim(SquidexClaimTypes.Permissions, string.Empty);
+                }
+
                 foreach (var permission in Permissions)
                 {
                     yield return new Claim(SquidexClaimTypes.Permissions, permission.Id);

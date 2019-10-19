@@ -9,8 +9,7 @@ import { Router, RouterStateSnapshot, UrlSegment } from '@angular/router';
 import { of } from 'rxjs';
 import { IMock, It, Mock, Times } from 'typemoq';
 
-import { SchemaDetailsDto } from './../services/schemas.service';
-import { SchemasState } from './../state/schemas.state';
+import { SchemaDetailsDto, SchemasState } from '@app/shared/internal';
 import { SchemaMustNotBeSingletonGuard } from './schema-must-not-be-singleton.guard';
 
 describe('SchemaMustNotBeSingletonGuard', () => {
@@ -48,23 +47,6 @@ describe('SchemaMustNotBeSingletonGuard', () => {
         }).unsubscribe();
 
         expect(result!).toBeTruthy();
-
-        router.verify(x => x.navigate(It.isAny()), Times.never());
-    });
-
-    it('should subscribe to schema and return false when not found', () => {
-        const state: RouterStateSnapshot = <any>{ url: 'schemas/name/' };
-
-        schemasState.setup(x => x.selectedSchema)
-            .returns(() => of(undefined));
-
-        let result: boolean;
-
-        schemaGuard.canActivate(route, state).subscribe(x => {
-            result = x;
-        }).unsubscribe();
-
-        expect(result!).toBeFalsy();
 
         router.verify(x => x.navigate(It.isAny()), Times.never());
     });

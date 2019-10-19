@@ -8,13 +8,12 @@
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { inject, TestBed } from '@angular/core/testing';
 
-import { DateTime } from '@app/framework';
-
 import {
     ApiUrlConfig,
+    DateTime,
     HistoryEventDto,
     HistoryService
-} from './../';
+} from '@app/shared/internal';
 
 describe('HistoryService', () => {
     beforeEach(() => {
@@ -36,7 +35,7 @@ describe('HistoryService', () => {
     it('should make get request to get history events',
         inject([HistoryService, HttpTestingController], (historyService: HistoryService, httpMock: HttpTestingController) => {
 
-        let events: HistoryEventDto[];
+        let events: ReadonlyArray<HistoryEventDto>;
 
         historyService.getHistory('my-app', 'settings.contributors').subscribe(result => {
             events = result;

@@ -8,12 +8,12 @@
 using System;
 using System.Runtime.Serialization;
 using Squidex.Domain.Apps.Core.Rules;
-using Squidex.Domain.Apps.Events;
 using Squidex.Domain.Apps.Events.Rules;
 using Squidex.Infrastructure;
-using Squidex.Infrastructure.Dispatching;
 using Squidex.Infrastructure.EventSourcing;
 using Squidex.Infrastructure.States;
+
+#pragma warning disable IDE0060 // Remove unused parameter
 
 namespace Squidex.Domain.Apps.Entities.Rules.State
 {
@@ -29,46 +29,66 @@ namespace Squidex.Domain.Apps.Entities.Rules.State
         [DataMember]
         public bool IsDeleted { get; set; }
 
-        protected void On(RuleCreated @event)
+        public void ApplyEvent(IEvent @event)
         {
-            RuleDef = new Rule(@event.Trigger, @event.Action);
-
-            AppId = @event.AppId;
-        }
-
-        protected void On(RuleUpdated @event)
-        {
-            if (@event.Trigger != null)
+            switch (@event)
             {
-                RuleDef = RuleDef.Update(@event.Trigger);
+                case RuleCreated e:
+                    {
+                        RuleDef = new Rule(e.Trigger, e.Action);
+                        RuleDef = RuleDef.Rename(e.Name);
+
+                        AppId = e.AppId;
+
+                        break;
+                    }
+
+                case RuleUpdated e:
+                    {
+                        if (e.Trigger != null)
+                        {
+                            RuleDef = RuleDef.Update(e.Trigger);
+                        }
+
+                        if (e.Action != null)
+                        {
+                            RuleDef = RuleDef.Update(e.Action);
+                        }
+
+                        if (e.Name != null)
+                        {
+                            RuleDef = RuleDef.Rename(e.Name);
+                        }
+
+                        break;
+                    }
+
+                case RuleEnabled _:
+                    {
+                        RuleDef = RuleDef.Enable();
+
+                        break;
+                    }
+
+                case RuleDisabled _:
+                    {
+                        RuleDef = RuleDef.Disable();
+
+                        break;
+                    }
+
+                case RuleDeleted _:
+                    {
+                        IsDeleted = true;
+
+                        break;
+                    }
             }
-
-            if (@event.Action != null)
-            {
-                RuleDef = RuleDef.Update(@event.Action);
-            }
-        }
-
-        protected void On(RuleEnabled @event)
-        {
-            RuleDef = RuleDef.Enable();
-        }
-
-        protected void On(RuleDisabled @event)
-        {
-            RuleDef = RuleDef.Disable();
-        }
-
-        protected void On(RuleDeleted @event)
-        {
-            IsDeleted = true;
         }
 
         public override RuleState Apply(Envelope<IEvent> @event)
         {
-            var payload = (SquidexEvent)@event.Payload;
-
-            return Clone().Update(payload, @event.Headers, r => r.DispatchAction(payload));
+            return Clone().Update(@event, (e, s) => s.ApplyEvent(e));
         }
     }
 }

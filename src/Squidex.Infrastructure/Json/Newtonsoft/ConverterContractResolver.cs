@@ -20,6 +20,8 @@ namespace Squidex.Infrastructure.Json.Newtonsoft
 
         public ConverterContractResolver(params JsonConverter[] converters)
         {
+            NamingStrategy = new CamelCaseNamingStrategy(false, true);
+
             this.converters = converters;
 
             foreach (var converter in converters)
@@ -34,13 +36,28 @@ namespace Squidex.Infrastructure.Json.Newtonsoft
             }
         }
 
+        protected override JsonArrayContract CreateArrayContract(Type objectType)
+        {
+            if (objectType.IsGenericType && objectType.GetGenericTypeDefinition() == typeof(IReadOnlyList<>))
+            {
+                var implementationType = typeof(List<>).MakeGenericType(objectType.GetGenericArguments());
+
+                return base.CreateArrayContract(implementationType);
+            }
+
+            return base.CreateArrayContract(objectType);
+        }
+
         protected override JsonDictionaryContract CreateDictionaryContract(Type objectType)
         {
-            var contract = base.CreateDictionaryContract(objectType);
+            if (objectType.IsGenericType && objectType.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))
+            {
+                var implementationType = typeof(Dictionary<,>).MakeGenericType(objectType.GetGenericArguments());
 
-            contract.DictionaryKeyResolver = propertyName => propertyName;
+                return base.CreateDictionaryContract(implementationType);
+            }
 
-            return contract;
+            return base.CreateDictionaryContract(objectType);
         }
 
         protected override JsonConverter ResolveContractConverter(Type objectType)

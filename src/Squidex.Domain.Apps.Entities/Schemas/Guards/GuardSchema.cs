@@ -7,29 +7,27 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Squidex.Domain.Apps.Core;
 using Squidex.Domain.Apps.Core.Schemas;
 using Squidex.Domain.Apps.Entities.Schemas.Commands;
 using Squidex.Infrastructure;
+using Squidex.Infrastructure.Validation;
+
+#pragma warning disable IDE0060 // Remove unused parameter
 
 namespace Squidex.Domain.Apps.Entities.Schemas.Guards
 {
     public static class GuardSchema
     {
-        public static Task CanCreate(CreateSchema command, IAppProvider appProvider)
+        public static void CanCreate(CreateSchema command)
         {
             Guard.NotNull(command, nameof(command));
 
-            return Validate.It(() => "Cannot create schema.", async e =>
+            Validate.It(() => "Cannot create schema.", e =>
             {
                 if (!command.Name.IsSlug())
                 {
                     e(Not.ValidSlug("Name"), nameof(command.Name));
-                }
-                else if (await appProvider.GetSchemaAsync(command.AppId.Id, command.Name) != null)
-                {
-                    e("A schema with the same name already exists.");
                 }
 
                 ValidateUpsert(command, e);
@@ -54,7 +52,7 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
 
             if (command.ParentFieldId.HasValue)
             {
-                arrayField = GuardHelper.GetArrayFieldOrThrow(schema, command.ParentFieldId.Value);
+                arrayField = GuardHelper.GetArrayFieldOrThrow(schema, command.ParentFieldId.Value, false);
             }
 
             Validate.It(() => "Cannot reorder schema fields.", error =>
@@ -140,49 +138,73 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
                     fieldIndex++;
                     fieldPrefix = $"Fields[{fieldIndex}]";
 
-                    if (!field.Partitioning.IsValidPartitioning())
-                    {
-                        e(Not.Valid("Partitioning"), $"{fieldPrefix}.{nameof(field.Partitioning)}");
-                    }
-
-                    ValidateField(field, fieldPrefix, e);
-
-                    if (field.Nested?.Count > 0)
-                    {
-                        if (field.Properties is ArrayFieldProperties)
-                        {
-                            var nestedIndex = 0;
-                            var nestedPrefix = string.Empty;
-
-                            foreach (var nestedField in field.Nested)
-                            {
-                                nestedIndex++;
-                                nestedPrefix = $"{fieldPrefix}.Nested[{nestedIndex}]";
-
-                                if (nestedField.Properties is ArrayFieldProperties)
-                                {
-                                    e("Nested field cannot be array fields.", $"{nestedPrefix}.{nameof(nestedField.Properties)}");
-                                }
-
-                                ValidateField(nestedField, nestedPrefix, e);
-                            }
-                        }
-                        else if (field.Nested.Count > 0)
-                        {
-                            e("Only array fields can have nested fields.", $"{fieldPrefix}.{nameof(field.Partitioning)}");
-                        }
-
-                        if (field.Nested.Select(x => x.Name).Distinct().Count() != field.Nested.Count)
-                        {
-                            e("Fields cannot have duplicate names.", $"{fieldPrefix}.Nested");
-                        }
-                    }
+                    ValidateRootField(field, fieldPrefix, e);
                 }
 
-                if (command.Fields.Select(x => x.Name).Distinct().Count() != command.Fields.Count)
+                if (command.Fields.Select(x => x?.Name).Distinct().Count() != command.Fields.Count)
                 {
                     e("Fields cannot have duplicate names.", nameof(command.Fields));
                 }
+            }
+        }
+
+        private static void ValidateRootField(UpsertSchemaField field, string prefix, AddValidation e)
+        {
+            if (field == null)
+            {
+                e(Not.Defined("Field"), prefix);
+            }
+            else
+            {
+                if (!field.Partitioning.IsValidPartitioning())
+                {
+                    e(Not.Valid("Partitioning"), $"{prefix}.{nameof(field.Partitioning)}");
+                }
+
+                ValidateField(field, prefix, e);
+
+                if (field.Nested?.Count > 0)
+                {
+                    if (field.Properties is ArrayFieldProperties)
+                    {
+                        var nestedIndex = 0;
+                        var nestedPrefix = string.Empty;
+
+                        foreach (var nestedField in field.Nested)
+                        {
+                            nestedIndex++;
+                            nestedPrefix = $"{prefix}.Nested[{nestedIndex}]";
+
+                            ValidateNestedField(nestedField, nestedPrefix, e);
+                        }
+                    }
+                    else if (field.Nested.Count > 0)
+                    {
+                        e("Only array fields can have nested fields.", $"{prefix}.{nameof(field.Partitioning)}");
+                    }
+
+                    if (field.Nested.Select(x => x.Name).Distinct().Count() != field.Nested.Count)
+                    {
+                        e("Fields cannot have duplicate names.", $"{prefix}.Nested");
+                    }
+                }
+            }
+        }
+
+        private static void ValidateNestedField(UpsertSchemaNestedField nestedField, string prefix, AddValidation e)
+        {
+            if (nestedField == null)
+            {
+                e(Not.Defined("Field"), prefix);
+            }
+            else
+            {
+                if (nestedField.Properties is ArrayFieldProperties)
+                {
+                    e("Nested field cannot be array fields.", $"{prefix}.{nameof(nestedField.Properties)}");
+                }
+
+                ValidateField(nestedField, prefix, e);
             }
         }
 
@@ -199,6 +221,19 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
             }
             else
             {
+                if (!field.Properties.IsForApi())
+                {
+                    if (field.IsHidden)
+                    {
+                        e("UI field cannot be hidden.", $"{prefix}.{nameof(field.IsHidden)}");
+                    }
+
+                    if (field.IsDisabled)
+                    {
+                        e("UI field cannot be disabled.", $"{prefix}.{nameof(field.IsDisabled)}");
+                    }
+                }
+
                 var errors = FieldPropertiesValidator.Validate(field.Properties);
 
                 errors.Foreach(x => x.WithPrefix($"{prefix}.{nameof(field.Properties)}").AddTo(e));

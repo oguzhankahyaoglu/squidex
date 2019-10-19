@@ -7,50 +7,58 @@
 
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { distinctUntilChanged, map, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 
 import {
-    DateTime,
     DialogService,
-    ImmutableArray,
-    notify,
-    State,
-    Version
+    shareSubscribed,
+    State
 } from '@app/framework';
 
-import { AuthService} from './../services/auth.service';
 import { AppsState } from './apps.state';
 
 import {
-    CreateRuleDto,
     RuleDto,
     RulesService,
-    UpdateRuleDto
+    UpsertRuleDto
 } from './../services/rules.service';
 
 interface Snapshot {
-    rules: ImmutableArray<RuleDto>;
+    // The current rules.
+    rules: RulesList;
 
+    // Indicates if the rules are loaded.
     isLoaded?: boolean;
+
+    // Indicates if the user can create rules.
+    canCreate?: boolean;
+
+    // Indicates if the user can read events.
+    canReadEvents?: boolean;
 }
+
+type RulesList = ReadonlyArray<RuleDto>;
 
 @Injectable()
 export class RulesState extends State<Snapshot> {
     public rules =
-        this.changes.pipe(map(x => x.rules),
-            distinctUntilChanged());
+        this.project(x => x.rules);
 
     public isLoaded =
-        this.changes.pipe(map(x => !!x.isLoaded),
-            distinctUntilChanged());
+        this.project(x => x.isLoaded === true);
+
+    public canCreate =
+        this.project(x => x.canCreate === true);
+
+    public canReadEvents =
+        this.project(x => x.canReadEvents === true);
 
     constructor(
         private readonly appsState: AppsState,
-        private readonly authState: AuthService,
         private readonly dialogs: DialogService,
         private readonly rulesService: RulesService
     ) {
-        super({ rules: ImmutableArray.empty() });
+        super({ rules: [] });
     }
 
     public load(isReload = false): Observable<any> {
@@ -59,74 +67,85 @@ export class RulesState extends State<Snapshot> {
         }
 
         return this.rulesService.getRules(this.appName).pipe(
-            tap(dtos => {
+            tap(({ items: rules, canCreate, canReadEvents }) => {
                 if (isReload) {
                     this.dialogs.notifyInfo('Rules reloaded.');
                 }
 
                 this.next(s => {
-                    const rules = ImmutableArray.of(dtos);
-
-                    return { ...s, rules, isLoaded: true };
+                    return { ...s,
+                        canCreate,
+                        canReadEvents,
+                        isLoaded: true,
+                        rules
+                    };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
-    public create(request: CreateRuleDto, now?: DateTime): Observable<any> {
-        return this.rulesService.postRule(this.appName, request, this.user, now || DateTime.now()).pipe(
-            tap(dto => {
+    public create(request: UpsertRuleDto): Observable<RuleDto> {
+        return this.rulesService.postRule(this.appName, request).pipe(
+            tap(created => {
                 this.next(s => {
-                    const rules = s.rules.push(dto);
+                    const rules = [...s.rules, created];
 
                     return { ...s, rules };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
     public delete(rule: RuleDto): Observable<any> {
-        return this.rulesService.deleteRule(this.appName, rule.id, rule.version).pipe(
+        return this.rulesService.deleteRule(this.appName, rule, rule.version).pipe(
             tap(() => {
                 this.next(s => {
-                    const rules = s.rules.removeAll(x => x.id === rule.id);
+                    const rules = s.rules.removeBy('id', rule);
 
                     return { ...s, rules };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
-    public updateAction(rule: RuleDto, action: any, now?: DateTime): Observable<any> {
-        return this.rulesService.putRule(this.appName, rule.id, new UpdateRuleDto(null, action), rule.version).pipe(
-            tap(dto => {
-                this.replaceRule(updateAction(rule, action, this.user, dto.version, now));
+    public updateAction(rule: RuleDto, action: any): Observable<RuleDto> {
+        return this.rulesService.putRule(this.appName, rule, { action }, rule.version).pipe(
+            tap(updated => {
+                this.replaceRule(updated);
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
-    public updateTrigger(rule: RuleDto, trigger: any, now?: DateTime): Observable<any> {
-        return this.rulesService.putRule(this.appName, rule.id, new UpdateRuleDto(trigger, null), rule.version).pipe(
-            tap(dto => {
-                this.replaceRule(updateTrigger(rule, trigger, this.user, dto.version, now));
+    public updateTrigger(rule: RuleDto, trigger: any): Observable<RuleDto> {
+        return this.rulesService.putRule(this.appName, rule, { trigger }, rule.version).pipe(
+            tap(updated => {
+                this.replaceRule(updated);
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
-    public enable(rule: RuleDto, now?: DateTime): Observable<any> {
-        return this.rulesService.enableRule(this.appName, rule.id, rule.version).pipe(
-            tap(dto => {
-                this.replaceRule(setEnabled(rule, true, this.user, dto.version, now));
+    public rename(rule: RuleDto, name: string): Observable<RuleDto> {
+        return this.rulesService.putRule(this.appName, rule, { name }, rule.version).pipe(
+            tap(updated => {
+                this.replaceRule(updated);
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
-    public disable(rule: RuleDto, now?: DateTime): Observable<any> {
-        return this.rulesService.disableRule(this.appName, rule.id, rule.version).pipe(
-            tap(dto => {
-                this.replaceRule(setEnabled(rule, false, this.user, dto.version, now));
+    public enable(rule: RuleDto): Observable<any> {
+        return this.rulesService.enableRule(this.appName, rule, rule.version).pipe(
+            tap(updated => {
+                this.replaceRule(updated);
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
+    }
+
+    public disable(rule: RuleDto): Observable<any> {
+        return this.rulesService.disableRule(this.appName, rule, rule.version).pipe(
+            tap(updated => {
+                this.replaceRule(updated);
+            }),
+            shareSubscribed(this.dialogs));
     }
 
     private replaceRule(rule: RuleDto) {
@@ -140,34 +159,4 @@ export class RulesState extends State<Snapshot> {
     private get appName() {
         return this.appsState.appName;
     }
-
-    private get user() {
-        return this.authState.user!.token;
-    }
 }
-
-const updateTrigger = (rule: RuleDto, trigger: any, user: string, version: Version, now?: DateTime) =>
-    rule.with({
-        trigger,
-        triggerType: trigger.triggerType,
-        lastModified: now || DateTime.now(),
-        lastModifiedBy: user,
-        version
-    });
-
-const updateAction = (rule: RuleDto, action: any, user: string, version: Version, now?: DateTime) =>
-    rule.with({
-        action,
-        actionType: action.actionType,
-        lastModified: now || DateTime.now(),
-        lastModifiedBy: user,
-        version
-    });
-
-const setEnabled = (rule: RuleDto, isEnabled: boolean, user: string, version: Version, now?: DateTime) =>
-    rule.with({
-        isEnabled,
-        lastModified: now || DateTime.now(),
-        lastModifiedBy: user,
-        version
-    });

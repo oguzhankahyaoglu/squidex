@@ -12,6 +12,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Squidex.Infrastructure;
+using Squidex.Infrastructure.Validation;
+using Squidex.Shared.Identity;
 
 namespace Squidex.Domain.Users
 {
@@ -84,6 +86,15 @@ namespace Squidex.Domain.Users
             return Task.FromResult(count);
         }
 
+        public static async Task<List<UserWithClaims>> QueryByIdsAync(this UserManager<IdentityUser> userManager, string[] ids)
+        {
+            var users = userManager.Users.Where(x => ids.Contains(x.Id)).ToList();
+
+            var result = await userManager.ResolveUsersAsync(users);
+
+            return result.ToList();
+        }
+
         public static async Task<List<UserWithClaims>> QueryByEmailAsync(this UserManager<IdentityUser> userManager, string email = null, int take = 10, int skip = 0)
         {
             var users = QueryUsers(userManager, email).Skip(skip).Take(take).ToList();
@@ -115,7 +126,7 @@ namespace Squidex.Domain.Users
             return result;
         }
 
-        public static async Task<IdentityUser> CreateAsync(this UserManager<IdentityUser> userManager, IUserFactory factory, UserValues values)
+        public static async Task<UserWithClaims> CreateAsync(this UserManager<IdentityUser> userManager, IUserFactory factory, UserValues values)
         {
             var user = factory.Create(values.Email);
 
@@ -123,7 +134,7 @@ namespace Squidex.Domain.Users
             {
                 await DoChecked(() => userManager.CreateAsync(user), "Cannot create user.");
 
-                var claims = values.ToClaims().ToList();
+                var claims = values.ToClaims(true);
 
                 if (claims.Count > 0)
                 {
@@ -142,10 +153,10 @@ namespace Squidex.Domain.Users
                 throw;
             }
 
-            return user;
+            return await userManager.ResolveUserAsync(user);
         }
 
-        public static async Task UpdateAsync(this UserManager<IdentityUser> userManager, string id, UserValues values)
+        public static async Task<UserWithClaims> UpdateAsync(this UserManager<IdentityUser> userManager, string id, UserValues values)
         {
             var user = await userManager.FindByIdAsync(id);
 
@@ -155,6 +166,15 @@ namespace Squidex.Domain.Users
             }
 
             await UpdateAsync(userManager, user, values);
+
+            return await userManager.ResolveUserAsync(user);
+        }
+
+        public static Task<IdentityResult> GenerateClientSecretAsync(this UserManager<IdentityUser> userManager, IdentityUser user)
+        {
+            var claims = new List<Claim> { new Claim(SquidexClaimTypes.ClientSecret, RandomHash.New()) };
+
+            return userManager.SyncClaimsAsync(user, claims);
         }
 
         public static async Task<IdentityResult> UpdateSafeAsync(this UserManager<IdentityUser> userManager, IdentityUser user, UserValues values)
@@ -184,7 +204,7 @@ namespace Squidex.Domain.Users
                 await DoChecked(() => userManager.SetUserNameAsync(user, values.Email), "Cannot update email.");
             }
 
-            await DoChecked(() => userManager.SyncClaimsAsync(user, values.ToClaims().ToList()), "Cannot update user.");
+            await DoChecked(() => userManager.SyncClaimsAsync(user, values.ToClaims(false)), "Cannot update user.");
 
             if (!string.IsNullOrWhiteSpace(values.Password))
             {
@@ -193,7 +213,7 @@ namespace Squidex.Domain.Users
             }
         }
 
-        public static async Task LockAsync(this UserManager<IdentityUser> userManager, string id)
+        public static async Task<UserWithClaims> LockAsync(this UserManager<IdentityUser> userManager, string id)
         {
             var user = await userManager.FindByIdAsync(id);
 
@@ -203,9 +223,11 @@ namespace Squidex.Domain.Users
             }
 
             await DoChecked(() => userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100)), "Cannot lock user.");
+
+            return await userManager.ResolveUserAsync(user);
         }
 
-        public static async Task UnlockAsync(this UserManager<IdentityUser> userManager, string id)
+        public static async Task<UserWithClaims> UnlockAsync(this UserManager<IdentityUser> userManager, string id)
         {
             var user = await userManager.FindByIdAsync(id);
 
@@ -215,6 +237,8 @@ namespace Squidex.Domain.Users
             }
 
             await DoChecked(() => userManager.SetLockoutEndDateAsync(user, null), "Cannot unlock user.");
+
+            return await userManager.ResolveUserAsync(user);
         }
 
         private static async Task DoChecked(Func<Task<IdentityResult>> action, string message)
@@ -227,11 +251,12 @@ namespace Squidex.Domain.Users
             }
         }
 
-        public static async Task<IdentityResult> SyncClaimsAsync(this UserManager<IdentityUser> userManager, IdentityUser user, IEnumerable<Claim> claims)
+        public static async Task<IdentityResult> SyncClaimsAsync(this UserManager<IdentityUser> userManager, IdentityUser user, List<Claim> claims)
         {
             if (claims.Any())
             {
                 var oldClaims = await userManager.GetClaimsAsync(user);
+
                 var oldClaimsToRemove = new List<Claim>();
 
                 foreach (var oldClaim in oldClaims)
@@ -252,7 +277,7 @@ namespace Squidex.Domain.Users
                     }
                 }
 
-                return await userManager.AddClaimsAsync(user, claims);
+                return await userManager.AddClaimsAsync(user, claims.Where(x => !string.IsNullOrWhiteSpace(x.Value)));
             }
 
             return IdentityResult.Success;

@@ -7,10 +7,8 @@
 
 import { Component, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
-import { UserDto } from './../../services/users.service';
-import { UsersState } from './../../state/users.state';
+import { UserDto, UsersState } from '@app/features/administration/internal';
 
 @Component({
     selector: 'sqx-users-page',
@@ -26,35 +24,26 @@ export class UsersPageComponent implements OnInit {
     }
 
     public ngOnInit() {
-        this.usersState.load().pipe(onErrorResumeNext()).subscribe();
+        this.usersState.load();
     }
 
     public reload() {
-        this.usersState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.usersState.load(true);
     }
 
     public search() {
-        this.usersState.search(this.usersFilter.value).pipe(onErrorResumeNext()).subscribe();
+        this.usersState.search(this.usersFilter.value);
     }
 
     public goPrev() {
-        this.usersState.goPrev().pipe(onErrorResumeNext()).subscribe();
+        this.usersState.goPrev();
     }
 
     public goNext() {
-        this.usersState.goNext().pipe(onErrorResumeNext()).subscribe();
+        this.usersState.goNext();
     }
 
-    public lock(user: UserDto) {
-        this.usersState.lock(user).pipe(onErrorResumeNext()).subscribe();
-    }
-
-    public unlock(user: UserDto) {
-        this.usersState.unlock(user).pipe(onErrorResumeNext()).subscribe();
-    }
-
-    public trackByUser(index: number, userInfo: { user: UserDto }) {
-        return userInfo.user.id;
+    public trackByUser(index: number, user: UserDto) {
+        return user.id;
     }
 }
-

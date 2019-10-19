@@ -5,27 +5,18 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { Component, Input, OnChanges, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
     AddPermissionForm,
-    AppRoleDto,
     AutocompleteComponent,
     AutocompleteSource,
     EditPermissionsForm,
     fadeAnimation,
-    RolesState,
-    UpdateAppRoleDto
+    RoleDto,
+    RolesState
 } from '@app/shared';
-
-const DEFAULT_ROLES = [
-    'Owner',
-    'Developer',
-    'Editor',
-    'Reader'
-];
 
 @Component({
     selector: 'sqx-role',
@@ -33,20 +24,21 @@ const DEFAULT_ROLES = [
     templateUrl: './role.component.html',
     animations: [
         fadeAnimation
-    ]
+    ],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleComponent implements OnChanges {
     @Input()
-    public role: AppRoleDto;
+    public role: RoleDto;
 
     @Input()
     public allPermissions: AutocompleteSource;
 
-    @ViewChild('addInput')
+    @ViewChild('addInput', { static: false })
     public addPermissionInput: AutocompleteComponent;
 
     public isEditing = false;
-    public isDefaultRole = false;
+    public isEditable = false;
 
     public addPermissionForm = new AddPermissionForm(this.formBuilder);
 
@@ -59,25 +51,22 @@ export class RoleComponent implements OnChanges {
     }
 
     public ngOnChanges() {
-        this.isDefaultRole = DEFAULT_ROLES.indexOf(this.role.name) >= 0;
+        this.isEditable = this.role.canUpdate;
 
         this.editForm.load(this.role.permissions);
-
-        if (this.isDefaultRole) {
-            this.editForm.form.disable();
-        }
+        this.editForm.setEnabled(this.isEditable);
     }
 
     public toggleEditing() {
         this.isEditing = !this.isEditing;
     }
 
-    public removePermission(index: number) {
-        this.editForm.remove(index);
+    public delete() {
+        this.rolesState.delete(this.role);
     }
 
-    public remove() {
-        this.rolesState.delete(this.role).pipe(onErrorResumeNext()).subscribe();
+    public removePermission(index: number) {
+        this.editForm.remove(index);
     }
 
     public addPermission() {
@@ -86,7 +75,7 @@ export class RoleComponent implements OnChanges {
         if (value) {
             this.editForm.add(value.permission);
 
-            this.addPermissionForm.submitCompleted({});
+            this.addPermissionForm.submitCompleted();
             this.addPermissionInput.focus();
         }
     }
@@ -95,7 +84,7 @@ export class RoleComponent implements OnChanges {
         const value = this.editForm.submit();
 
         if (value) {
-            const request = new UpdateAppRoleDto(value);
+            const request = { permissions: value };
 
             this.rolesState.update(this.role, request)
                 .subscribe(() => {
@@ -108,4 +97,3 @@ export class RoleComponent implements OnChanges {
         }
     }
 }
-

@@ -1,4 +1,4 @@
-﻿var webpackConfig = require('./webpack.test');
+﻿const webpackConfig = require('./webpack.config');
 
 module.exports = function (config) {
     var _config = {
@@ -10,20 +10,20 @@ module.exports = function (config) {
         frameworks: ['jasmine'],
 
         /**
-         * Load additional test shim to setup angular2 for testing.
+         * Load additional test shim to setup angular for testing.
          */
         files: [
             { pattern: './app-config/karma-test-shim.js', watched: false }
         ],
 
         preprocessors: {
-            './app-config/karma-test-shim.js': ['webpack', 'sourcemap'],
+            './app-config/karma-test-shim.js': ['webpack', 'sourcemap']
         },
 
         /**
          * Load the files with webpack and use test configuration for it.
          */
-        webpack: webpackConfig,
+        webpack: webpackConfig({ target: 'tests', jit: true }),
 
         webpackMiddleware: {
             stats: 'errors-only'

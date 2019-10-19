@@ -18,7 +18,7 @@ import {
 import { formatError } from './error-formatting';
 
 interface State {
-    errorMessages: string[];
+    errorMessages: ReadonlyArray<string>;
 }
 
 @Component({
@@ -61,9 +61,7 @@ export class ControlErrorsComponent extends StatefulComponent<State> implements 
     public ngOnDestroy() {
         super.ngOnDestroy();
 
-        if (this.control && this.originalMarkAsTouched) {
-            this.control['markAsTouched'] = this.originalMarkAsTouched;
-        }
+        this.unsetCustomMarkAsTouchedFunction();
     }
 
     public ngOnChanges() {
@@ -80,13 +78,16 @@ export class ControlErrorsComponent extends StatefulComponent<State> implements 
         let control: AbstractControl | null = null;
 
         if (Types.isString(this.for)) {
-            control = this.formGroupDirective.form.controls[this.for];
+            if (this.formGroupDirective && this.formGroupDirective.form) {
+                control = this.formGroupDirective.form.controls[this.for];
+            }
         } else {
             control = this.for;
         }
 
-        if (this.control !== control) {
+        if (this.control !== control && control) {
             this.unsubscribeAll();
+            this.unsetCustomMarkAsTouchedFunction();
 
             this.control = control;
 
@@ -112,11 +113,17 @@ export class ControlErrorsComponent extends StatefulComponent<State> implements 
         this.createMessages();
     }
 
+    private unsetCustomMarkAsTouchedFunction() {
+        if (this.control && this.originalMarkAsTouched) {
+            this.control['markAsTouched'] = this.originalMarkAsTouched;
+        }
+    }
+
     private createMessages() {
         const errors: string[] = [];
 
         if (this.control && this.control.invalid && ((this.control.touched && !this.submitOnly) || this.submitted) && this.control.errors) {
-            for (let key in <any>this.control.errors) {
+            for (const key in <any>this.control.errors) {
                 if (this.control.errors.hasOwnProperty(key)) {
                     const message = formatError(this.displayFieldName, key, this.control.errors[key], this.control.value, this.errors);
 

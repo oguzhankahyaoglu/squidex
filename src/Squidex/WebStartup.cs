@@ -12,7 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Migrate_01;
 using Squidex.Areas.Api;
-using Squidex.Areas.Api.Config.Swagger;
+using Squidex.Areas.Api.Config.OpenApi;
 using Squidex.Areas.Api.Controllers.Contents;
 using Squidex.Areas.Api.Controllers.News;
 using Squidex.Areas.Api.Controllers.UI;
@@ -27,14 +27,17 @@ using Squidex.Config.Domain;
 using Squidex.Config.Orleans;
 using Squidex.Config.Startup;
 using Squidex.Config.Web;
+using Squidex.Domain.Apps.Core.HandleRules;
 using Squidex.Domain.Apps.Entities.Assets;
 using Squidex.Domain.Apps.Entities.Contents;
+using Squidex.Infrastructure;
 using Squidex.Infrastructure.Commands;
 using Squidex.Infrastructure.Diagnostics;
 using Squidex.Infrastructure.Translations;
 using Squidex.Pipeline.Plugins;
 using Squidex.Pipeline.Robots;
 using Squidex.Web;
+using Squidex.Web.Pipeline;
 
 namespace Squidex
 {
@@ -67,11 +70,11 @@ namespace Squidex
             services.AddMyIdentityServer();
             services.AddMyInfrastructureServices(config);
             services.AddMyLoggingServices(config);
+            services.AddMyOpenApiSettings();
             services.AddMyMigrationServices();
             services.AddMyRuleServices();
             services.AddMySerializers();
             services.AddMyStoreServices(config);
-            services.AddMySwaggerSettings();
             services.AddMySubscriptionServices(config);
 
             services.Configure<ContentOptions>(
@@ -80,6 +83,8 @@ namespace Squidex
                 config.GetSection("assets"));
             services.Configure<DeepLTranslatorOptions>(
                 config.GetSection("translations:deepL"));
+            services.Configure<LanguagesOptions>(
+                config.GetSection("languages"));
             services.Configure<ReadonlyOptions>(
                 config.GetSection("mode"));
             services.Configure<RobotsTxtOptions>(
@@ -94,6 +99,10 @@ namespace Squidex
                 config.GetSection("usage"));
             services.Configure<RebuildOptions>(
                 config.GetSection("rebuild"));
+            services.Configure<ExposedConfiguration>(
+                config.GetSection("exposedConfiguration"));
+            services.Configure<RuleOptions>(
+                config.GetSection("rules"));
 
             services.Configure<MyContentsControllerOptions>(
                 config.GetSection("contentsController"));
@@ -109,8 +118,8 @@ namespace Squidex
             services.AddOrleans(config, environment);
 
             services.AddHostedService<MigratorHost>();
+            services.AddHostedService<MigrationRebuilderHost>();
             services.AddHostedService<BackgroundHost>();
-            services.AddHostedService<RebuilderHost>();
 
             return services.BuildServiceProvider();
         }
@@ -118,6 +127,8 @@ namespace Squidex
         public void Configure(IApplicationBuilder app)
         {
             app.ApplicationServices.LogConfiguration();
+
+            app.UsePluginsBefore();
 
             app.UseMyHealthCheck();
             app.UseMyRobotsTxt();
@@ -132,6 +143,7 @@ namespace Squidex
             app.ConfigureIdentityServer();
             app.ConfigureFrontend();
 
+            app.UsePluginsAfter();
             app.UsePlugins();
         }
     }

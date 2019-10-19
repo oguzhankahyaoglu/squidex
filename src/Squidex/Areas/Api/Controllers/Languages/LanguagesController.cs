@@ -29,7 +29,7 @@ namespace Squidex.Areas.Api.Controllers.Languages
         /// Get supported languages.
         /// </summary>
         /// <remarks>
-        /// Provide a list of supported langauges code, following the ISO2Code standard.
+        /// Provide a list of supported language codes, following the ISO2Code standard.
         /// </remarks>
         /// <returns>
         /// 200 => Supported language codes returned.
@@ -40,7 +40,10 @@ namespace Squidex.Areas.Api.Controllers.Languages
         [ApiPermission]
         public IActionResult GetLanguages()
         {
-            var response = Language.AllLanguages.Select(LanguageDto.FromLanguage).ToArray();
+            var response = Deferred.Response(() =>
+            {
+                return Language.AllLanguages.Select(LanguageDto.FromLanguage).ToArray();
+            });
 
             Response.Headers[HeaderNames.ETag] = "1";
 

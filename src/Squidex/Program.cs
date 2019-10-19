@@ -31,13 +31,14 @@ namespace Squidex
                 {
                     builder.AddConfiguration(hostingContext.Configuration.GetSection("logging"));
                     builder.AddSemanticLog();
-                    builder.AddFilter();
+                    builder.AddFilters();
                 })
                 .ConfigureAppConfiguration((hostContext, builder) =>
                 {
                     builder.Sources.Clear();
 
-                    builder.AddJsonFile($"appsettings.json", true, true);
+                    builder.AddJsonFile($"appsettings.json", true);
+                    builder.AddJsonFile($"appsettings.Custom.json", true);
                     builder.AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true);
 
                     builder.AddEnvironmentVariables();

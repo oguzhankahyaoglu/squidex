@@ -8,17 +8,14 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnInit, Output } from '@angular/core';
 
 import {
-    AppsState,
     AssetDto,
-    AssetsService,
-    AuthService,
-    DateTime,
+    AssetUploaderState,
     DialogModel,
     DialogService,
     fadeAnimation,
     StatefulComponent,
     Types,
-    Versioned
+    UploadCanceled
 } from '@app/shared/internal';
 
 interface State {
@@ -35,6 +32,24 @@ interface State {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssetComponent extends StatefulComponent<State> implements OnInit {
+    @Output()
+    public load = new EventEmitter<AssetDto>();
+
+    @Output()
+    public loadError = new EventEmitter();
+
+    @Output()
+    public remove = new EventEmitter();
+
+    @Output()
+    public update = new EventEmitter();
+
+    @Output()
+    public delete = new EventEmitter();
+
+    @Output()
+    public select = new EventEmitter();
+
     @Input()
     public initFile: File;
 
@@ -60,32 +75,12 @@ export class AssetComponent extends StatefulComponent<State> implements OnInit {
     public isListView = false;
 
     @Input()
-    public allTags: string[];
-
-    @Output()
-    public load = new EventEmitter<AssetDto>();
-
-    @Output()
-    public loadError = new EventEmitter();
-
-    @Output()
-    public remove = new EventEmitter<AssetDto>();
-
-    @Output()
-    public update = new EventEmitter<AssetDto>();
-
-    @Output()
-    public delete = new EventEmitter<AssetDto>();
-
-    @Output()
-    public select = new EventEmitter<AssetDto>();
+    public allTags: ReadonlyArray<string>;
 
     public editDialog = new DialogModel();
 
     constructor(changeDetector: ChangeDetectorRef,
-        private readonly appsState: AppsState,
-        private readonly assetsService: AssetsService,
-        private readonly authState: AuthService,
+        private readonly assetUploader: AssetUploaderState,
         private readonly dialogs: DialogService
     ) {
         super(changeDetector, {
@@ -99,15 +94,17 @@ export class AssetComponent extends StatefulComponent<State> implements OnInit {
         if (initFile) {
             this.setProgress(1);
 
-            this.assetsService.uploadFile(this.appsState.appName, initFile, this.authState.user!.token, DateTime.now())
+            this.assetUploader.uploadFile(initFile)
                 .subscribe(dto => {
-                    if (Types.is(dto, AssetDto)) {
-                        this.emitLoad(dto);
-                    } else {
+                    if (Types.isNumber(dto)) {
                         this.setProgress(dto);
+                    } else {
+                        this.emitLoad(dto);
                     }
                 }, error => {
-                    this.dialogs.notifyError(error);
+                    if (!Types.is(error, UploadCanceled)) {
+                        this.dialogs.notifyError(error);
+                    }
 
                     this.emitLoadError(error);
                 });
@@ -115,19 +112,21 @@ export class AssetComponent extends StatefulComponent<State> implements OnInit {
     }
 
     public updateFile(files: FileList) {
-        if (files.length === 1) {
+        if (files.length === 1 && this.asset.canUpload) {
             this.setProgress(1);
 
-            this.assetsService.replaceFile(this.appsState.appName, this.asset.id, files[0], this.asset.version)
+            this.assetUploader.uploadAsset(this.asset, files[0])
                 .subscribe(dto => {
-                    if (Types.is(dto, Versioned)) {
-                        this.updateAsset(this.asset.update(dto.payload, this.authState.user!.token, dto.version), true);
-                    } else {
+                    if (Types.isNumber(dto)) {
                         this.setProgress(dto);
+                    } else {
+                        this.updateAsset(dto, true);
                     }
                 }, error => {
                     this.dialogs.notifyError(error);
 
+                    this.setProgress(0);
+                }, () => {
                     this.setProgress(0);
                 });
         }
@@ -160,11 +159,11 @@ export class AssetComponent extends StatefulComponent<State> implements OnInit {
     }
 
     public emitUpdate() {
-        this.update.emit(this.asset);
+        this.update.emit();
     }
 
     public emitRemove() {
-        this.remove.emit(this.asset);
+        this.remove.emit();
     }
 
     private setProgress(progress: number) {

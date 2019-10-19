@@ -6,7 +6,9 @@
 // ==========================================================================
 
 using System;
+using System.Collections.ObjectModel;
 using Squidex.Domain.Apps.Core.Schemas;
+using Squidex.Infrastructure.Collections;
 using Squidex.Infrastructure.Reflection;
 
 namespace Squidex.Areas.Api.Controllers.Schemas.Models.Fields
@@ -24,13 +26,30 @@ namespace Squidex.Areas.Api.Controllers.Schemas.Models.Fields
         public int? MaxItems { get; set; }
 
         /// <summary>
-        /// The id of the referenced schema.
+        /// True, if duplicate values are allowed.
         /// </summary>
-        public Guid SchemaId { get; set; }
+        public bool AllowDuplicates { get; set; }
+
+        /// <summary>
+        /// True to resolve references in the content list.
+        /// </summary>
+        public bool ResolveReference { get; set; }
+
+        /// <summary>
+        /// The editor that is used to manage this field.
+        /// </summary>
+        public ReferencesFieldEditor Editor { get; set; }
+
+        /// <summary>
+        /// The id of the referenced schemas.
+        /// </summary>
+        public ReadOnlyCollection<Guid> SchemaIds { get; set; }
 
         public override FieldProperties ToProperties()
         {
-            return SimpleMapper.Map(this, new ReferencesFieldProperties());
+            var result = SimpleMapper.Map(this, new ReferencesFieldProperties());
+
+            return result;
         }
     }
 }

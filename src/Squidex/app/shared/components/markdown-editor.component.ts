@@ -9,15 +9,14 @@ import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, E
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import {
-    AppsState,
+    ApiUrlConfig,
     AssetDto,
-    AssetsService,
-    AuthService,
-    DateTime,
+    AssetUploaderState,
     DialogModel,
     ResourceLoaderService,
     StatefulControlComponent,
-    Types
+    Types,
+    UploadCanceled
 } from '@app/shared/internal';
 
 declare var SimpleMDE: any;
@@ -42,21 +41,20 @@ export class MarkdownEditorComponent extends StatefulControlComponent<State, str
     private value: string;
     private isDisabled = false;
 
-    @ViewChild('editor')
+    @ViewChild('editor', { static: false })
     public editor: ElementRef;
 
-    @ViewChild('container')
+    @ViewChild('container', { static: false })
     public container: ElementRef;
 
-    @ViewChild('inner')
+    @ViewChild('inner', { static: false })
     public inner: ElementRef;
 
     public assetsDialog = new DialogModel();
 
     constructor(changeDetector: ChangeDetectorRef,
-        private readonly appsState: AppsState,
-        private readonly assetsService: AssetsService,
-        private readonly authState: AuthService,
+        private readonly apiUrl: ApiUrlConfig,
+        private readonly assetUploader: AssetUploaderState,
         private readonly renderer: Renderer2,
         private readonly resourceLoader: ResourceLoaderService
     ) {
@@ -82,6 +80,10 @@ export class MarkdownEditorComponent extends StatefulControlComponent<State, str
     }
 
     private showSelector = () => {
+        if (this.isDisabled) {
+            return;
+        }
+
         this.assetsDialog.show();
     }
 
@@ -201,11 +203,11 @@ export class MarkdownEditorComponent extends StatefulControlComponent<State, str
         });
     }
 
-    public insertAssets(assets: AssetDto[]) {
+    public insertAssets(assets: ReadonlyArray<AssetDto>) {
         let content = '';
 
-        for (let asset of assets) {
-            content += `![${asset.fileName}](${asset.url} '${asset.fileName}')`;
+        for (const asset of assets) {
+            content += `![${asset.fileName}](${asset.fullUrl(this.apiUrl)} '${asset.fileName}')`;
         }
 
         if (content.length > 0) {
@@ -215,15 +217,19 @@ export class MarkdownEditorComponent extends StatefulControlComponent<State, str
         this.assetsDialog.hide();
     }
 
-    public insertFiles(files: File[]) {
+    public insertFiles(files: ReadonlyArray<File>) {
         const doc = this.simplemde.codemirror.getDoc();
 
-        for (let file of files) {
+        for (const file of files) {
             this.uploadFile(doc, file);
         }
     }
 
     private uploadFile(doc: any, file: File) {
+        if (this.isDisabled) {
+            return;
+        }
+
         const uploadCursor = doc.getCursor();
         const uploadText = `![Uploading file...${new Date()}]()`;
 
@@ -245,13 +251,15 @@ export class MarkdownEditorComponent extends StatefulControlComponent<State, str
             }
         };
 
-        this.assetsService.uploadFile(this.appsState.appName, file, this.authState.user!.token, DateTime.now())
+        this.assetUploader.uploadFile(file)
             .subscribe(asset => {
                 if (Types.is(asset, AssetDto)) {
-                    replaceText(`![${asset.fileName}](${asset.url} '${asset.fileName}')`);
+                    replaceText(`![${asset.fileName}](${asset.fullUrl(this.apiUrl)} '${asset.fileName}')`);
                 }
-            }, () => {
-                replaceText('FAILED');
+            }, error => {
+                if (!Types.is(error, UploadCanceled)) {
+                    replaceText('FAILED');
+                }
             });
     }
 }

@@ -5,6 +5,7 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
+using System;
 using System.Security.Claims;
 using Squidex.Infrastructure.Security;
 
@@ -12,11 +13,6 @@ namespace Squidex.Web
 {
     public static class Extensions
     {
-        public static bool IsFrontendClient(this ClaimsPrincipal principal)
-        {
-            return principal.IsInClient(Constants.FrontendClient);
-        }
-
         public static string GetClientId(this ClaimsPrincipal principal)
         {
             var clientId = principal.FindFirst(OpenIdClaims.ClientId)?.Value;
@@ -39,6 +35,13 @@ namespace Squidex.Web
             }
 
             return (null, null);
+        }
+
+        public static bool IsUser(this ApiController controller, string userId)
+        {
+            var subject = controller.User.OpenIdSubject();
+
+            return string.Equals(subject, userId, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

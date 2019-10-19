@@ -14,6 +14,7 @@ using Squidex.Domain.Apps.Core.Schemas;
 using Squidex.Domain.Apps.Core.ValidateContent;
 using Squidex.Infrastructure;
 using Squidex.Infrastructure.Json.Objects;
+using Squidex.Infrastructure.Validation;
 using Xunit;
 
 namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
@@ -38,7 +39,7 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("unknown: Not a known field.", "unknown")
+                    new ValidationError("Not a known field.", "unknown")
                 });
         }
 
@@ -59,7 +60,7 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field: Must be less or equal to '100'.", "my-field")
+                    new ValidationError("Must be less or equal to '100'.", "my-field")
                 });
         }
 
@@ -80,8 +81,8 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(es): Not a known invariant value.", "my-field(es)"),
-                    new ValidationError("my-field(it): Not a known invariant value.", "my-field(it)")
+                    new ValidationError("Not a known invariant value.", "my-field(es)"),
+                    new ValidationError("Not a known invariant value.", "my-field(it)")
                 });
         }
 
@@ -99,8 +100,8 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(de): Field is required.", "my-field(de)"),
-                    new ValidationError("my-field(en): Field is required.", "my-field(en)")
+                    new ValidationError("Field is required.", "my-field(de)"),
+                    new ValidationError("Field is required.", "my-field(en)")
                 });
         }
 
@@ -118,7 +119,25 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field: Field is required.", "my-field")
+                    new ValidationError("Field is required.", "my-field")
+                });
+        }
+
+        [Fact]
+        public async Task Should_add_error_if_required_data_string_field_is_not_in_bag()
+        {
+            schema = schema.AddString(1, "my-field", Partitioning.Invariant,
+                new StringFieldProperties { IsRequired = true });
+
+            var data =
+                new NamedContentData();
+
+            await data.ValidateAsync(context, schema, languagesConfig.ToResolver(), errors);
+
+            errors.Should().BeEquivalentTo(
+                new List<ValidationError>
+                {
+                    new ValidationError("Field is required.", "my-field")
                 });
         }
 
@@ -139,7 +158,7 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(xx): Not a known language.", "my-field(xx)")
+                    new ValidationError("Not a known language.", "my-field(xx)")
                 });
         }
 
@@ -182,8 +201,8 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(es): Not a known language.", "my-field(es)"),
-                    new ValidationError("my-field(it): Not a known language.", "my-field(it)")
+                    new ValidationError("Not a known language.", "my-field(es)"),
+                    new ValidationError("Not a known language.", "my-field(it)")
                 });
         }
 
@@ -200,7 +219,7 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("unknown: Not a known field.", "unknown")
+                    new ValidationError("Not a known field.", "unknown")
                 });
         }
 
@@ -221,7 +240,7 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field: Must be less or equal to '100'.", "my-field")
+                    new ValidationError("Must be less or equal to '100'.", "my-field")
                 });
         }
 
@@ -242,8 +261,8 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(es): Not a known invariant value.", "my-field(es)"),
-                    new ValidationError("my-field(it): Not a known invariant value.", "my-field(it)")
+                    new ValidationError("Not a known invariant value.", "my-field(es)"),
+                    new ValidationError("Not a known invariant value.", "my-field(it)")
                 });
         }
 
@@ -292,7 +311,7 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(xx): Not a known language.", "my-field(xx)")
+                    new ValidationError("Not a known language.", "my-field(xx)")
                 });
         }
 
@@ -313,17 +332,16 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field(es): Not a known language.", "my-field(es)"),
-                    new ValidationError("my-field(it): Not a known language.", "my-field(it)")
+                    new ValidationError("Not a known language.", "my-field(es)"),
+                    new ValidationError("Not a known language.", "my-field(it)")
                 });
         }
 
         [Fact]
         public async Task Should_add_error_if_array_field_has_required_nested_field()
         {
-            schema =
-                schema.AddArray(1, "my-field", Partitioning.Invariant, f => f.
-                    AddNumber(1, "my-nested", new NumberFieldProperties { IsRequired = true }));
+            schema = schema.AddArray(1, "my-field", Partitioning.Invariant, f => f.
+                AddNumber(2, "my-nested", new NumberFieldProperties { IsRequired = true }));
 
             var data =
                 new NamedContentData()
@@ -340,9 +358,41 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
             errors.Should().BeEquivalentTo(
                 new List<ValidationError>
                 {
-                    new ValidationError("my-field[1].my-nested: Field is required.", "my-field[1].my-nested"),
-                    new ValidationError("my-field[3].my-nested: Field is required.", "my-field[3].my-nested")
+                    new ValidationError("Field is required.", "my-field[1].my-nested"),
+                    new ValidationError("Field is required.", "my-field[3].my-nested")
                 });
+        }
+
+        [Fact]
+        public async Task Should_not_add_error_if_separator_not_defined()
+        {
+            schema = schema.AddUI(2, "ui", Partitioning.Invariant);
+
+            var data =
+                new NamedContentData();
+
+            await data.ValidateAsync(context, schema, languagesConfig.ToResolver(), errors);
+
+            Assert.Empty(errors);
+        }
+
+        [Fact]
+        public async Task Should_not_add_error_if_nested_separator_not_defined()
+        {
+            schema = schema.AddArray(1, "my-field", Partitioning.Invariant, f => f.
+                AddUI(2, "my-nested"));
+
+            var data =
+                new NamedContentData()
+                    .AddField("my-field",
+                        new ContentFieldData()
+                            .AddValue("iv",
+                                JsonValue.Array(
+                                    JsonValue.Object())));
+
+            await data.ValidateAsync(context, schema, languagesConfig.ToResolver(), errors);
+
+            Assert.Empty(errors);
         }
     }
 }

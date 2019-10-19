@@ -17,13 +17,13 @@ using Squidex.Infrastructure;
 using Squidex.Infrastructure.EventSourcing;
 using Squidex.Infrastructure.Log;
 using Squidex.Infrastructure.Orleans;
+using Squidex.Infrastructure.Tasks;
 
 namespace Squidex.Domain.Apps.Entities.Contents.Text
 {
     public sealed class GrainTextIndexer : ITextIndexer, IEventConsumer
     {
         private readonly IGrainFactory grainFactory;
-        private readonly ISemanticLog log;
 
         public string Name
         {
@@ -35,14 +35,11 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
             get { return "^content-"; }
         }
 
-        public GrainTextIndexer(IGrainFactory grainFactory, ISemanticLog log)
+        public GrainTextIndexer(IGrainFactory grainFactory)
         {
             Guard.NotNull(grainFactory, nameof(grainFactory));
-            Guard.NotNull(log, nameof(log));
 
             this.grainFactory = grainFactory;
-
-            this.log = log;
         }
 
         public bool Handles(StoredEvent @event)
@@ -52,7 +49,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
 
         public Task ClearAsync()
         {
-            return Task.CompletedTask;
+            return TaskHelper.Done;
         }
 
         public async Task On(Envelope<IEvent> @event)
@@ -69,13 +66,13 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
                         await index.DeleteAsync(id);
                         break;
                     case ContentCreated contentCreated:
-                        await index.IndexAsync(id, Data(contentCreated.Data), true);
+                        await index.IndexAsync(Data(id, contentCreated.Data, true));
                         break;
-                    case ContentUpdateProposed contentCreated:
-                        await index.IndexAsync(id, Data(contentCreated.Data), true);
+                    case ContentUpdateProposed contentUpdateProposed:
+                        await index.IndexAsync(Data(id, contentUpdateProposed.Data, true));
                         break;
                     case ContentUpdated contentUpdated:
-                        await index.IndexAsync(id, Data(contentUpdated.Data), false);
+                        await index.IndexAsync(Data(id, contentUpdated.Data, false));
                         break;
                     case ContentChangesDiscarded _:
                         await index.CopyAsync(id, false);
@@ -88,9 +85,9 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
             }
         }
 
-        private static J<IndexData> Data(NamedContentData data)
+        private static J<Update> Data(Guid contentId, NamedContentData data, bool onlySelf)
         {
-            return new IndexData { Data = data };
+            return new Update { Id = contentId, Data = data, OnlyDraft = onlySelf };
         }
 
         public async Task<List<Guid>> SearchAsync(string queryText, IAppEntity app, Guid schemaId, Scope scope = Scope.Published)

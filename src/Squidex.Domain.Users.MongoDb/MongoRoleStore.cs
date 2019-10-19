@@ -26,6 +26,7 @@ namespace Squidex.Domain.Users.MongoDb
                 cm.AutoMap();
 
                 cm.MapMember(x => x.Id).SetSerializer(new StringSerializer(BsonType.ObjectId));
+
                 cm.UnmapMember(x => x.ConcurrencyStamp);
             });
         }
@@ -43,7 +44,14 @@ namespace Squidex.Domain.Users.MongoDb
         protected override Task SetupCollectionAsync(IMongoCollection<IdentityRole> collection, CancellationToken ct = default)
         {
             return collection.Indexes.CreateOneAsync(
-                new CreateIndexModel<IdentityRole>(Index.Ascending(x => x.NormalizedName), new CreateIndexOptions { Unique = true }), cancellationToken: ct);
+                new CreateIndexModel<IdentityRole>(
+                    Index
+                        .Ascending(x => x.NormalizedName),
+                    new CreateIndexOptions
+                    {
+                        Unique = true
+                    }),
+                cancellationToken: ct);
         }
 
         protected override MongoCollectionSettings CollectionSettings()

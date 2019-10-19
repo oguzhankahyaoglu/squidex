@@ -5,7 +5,7 @@
  * Copyright (c) Sebastian Stehle. All rights r vbeserved
  */
 
-import { Types } from './../../utils/types';
+import { Types } from '@app/framework/internal';
 
 const DEFAULT_ERRORS: { [key: string]: string } = {
     between: '{field} must be between \'{min}\' and \'{max}\'.',
@@ -26,6 +26,7 @@ const DEFAULT_ERRORS: { [key: string]: string } = {
     patternmessage: '{message}',
     required: '{field} is required.',
     requiredTrue: '{field} is required.',
+    uniquestrings: '{field} must not contain duplicate values.',
     validdatetime: '{field} is not a valid date time.',
     validvalues: '{field} is not a valid value.',
     validarrayvalues: '{field} contains an invalid value: {invalidvalue}.'
@@ -58,7 +59,7 @@ export function formatError(field: string, type: string, properties: any, value:
         return null;
     }
 
-    for (let property in properties) {
+    for (const property in properties) {
         if (properties.hasOwnProperty(property)) {
             message = message.replace(`{${property.toLowerCase()}}`, properties[property]);
         }

@@ -6,8 +6,8 @@
 // ==========================================================================
 
 using Squidex.Domain.Apps.Core.Rules;
-using Squidex.Infrastructure;
 using Squidex.Infrastructure.EventSourcing;
+using Squidex.Infrastructure.Migrations;
 
 namespace Squidex.Domain.Apps.Events.Rules
 {
@@ -17,6 +17,8 @@ namespace Squidex.Domain.Apps.Events.Rules
         public RuleTrigger Trigger { get; set; }
 
         public RuleAction Action { get; set; }
+
+        public string Name { get; set; }
 
         public IEvent Migrate()
         {

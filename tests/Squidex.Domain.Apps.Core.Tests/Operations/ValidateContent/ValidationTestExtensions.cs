@@ -12,16 +12,18 @@ using System.Threading.Tasks;
 using Squidex.Domain.Apps.Core.Schemas;
 using Squidex.Domain.Apps.Core.ValidateContent;
 using Squidex.Domain.Apps.Core.ValidateContent.Validators;
-using Squidex.Infrastructure.Json.Objects;
 
 namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
 {
     public static class ValidationTestExtensions
     {
-        private static readonly Task<IReadOnlyList<Guid>> EmptyReferences = Task.FromResult<IReadOnlyList<Guid>>(new List<Guid>());
+        private static readonly Task<IReadOnlyList<(Guid SchemaId, Guid Id)>> EmptyReferences = Task.FromResult<IReadOnlyList<(Guid SchemaId, Guid Id)>>(new List<(Guid SchemaId, Guid Id)>());
         private static readonly Task<IReadOnlyList<IAssetInfo>> EmptyAssets = Task.FromResult<IReadOnlyList<IAssetInfo>>(new List<IAssetInfo>());
 
-        public static readonly ValidationContext ValidContext = new ValidationContext(Guid.NewGuid(), Guid.NewGuid(), (x, y) => EmptyReferences, x => EmptyAssets);
+        public static readonly ValidationContext ValidContext = new ValidationContext(Guid.NewGuid(), Guid.NewGuid(),
+            (x, y) => EmptyReferences,
+            (x) => EmptyReferences,
+            (x) => EmptyAssets);
 
         public static Task ValidateAsync(this IValidator validator, object value, IList<string> errors, ValidationContext context = null)
         {
@@ -32,23 +34,19 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
 
         public static Task ValidateOptionalAsync(this IValidator validator, object value, IList<string> errors, ValidationContext context = null)
         {
-            return validator.ValidateAsync(value,
+            return validator.ValidateAsync(
+                value,
                 CreateContext(context).Optional(true),
                 CreateFormatter(errors));
         }
 
-        public static Task ValidateAsync(this IField field, IJsonValue value, IList<string> errors, ValidationContext context = null)
+        public static Task ValidateAsync(this IField field, object value, IList<string> errors, ValidationContext context = null)
         {
-            return new FieldValidator(ValidatorsFactory.CreateValidators(field).ToArray(), field).ValidateAsync(value,
-                CreateContext(context),
-                CreateFormatter(errors));
-        }
-
-        public static Task ValidateOptionalAsync(this IField field, IJsonValue value, IList<string> errors, ValidationContext context = null)
-        {
-            return new FieldValidator(ValidatorsFactory.CreateValidators(field).ToArray(), field).ValidateAsync(value,
-                CreateContext(context).Optional(true),
-                CreateFormatter(errors));
+            return new FieldValidator(FieldValueValidatorsFactory.CreateValidators(field).ToArray(), field)
+                .ValidateAsync(
+                    value,
+                    CreateContext(context),
+                    CreateFormatter(errors));
         }
 
         private static AddError CreateFormatter(IList<string> errors)
@@ -75,14 +73,14 @@ namespace Squidex.Domain.Apps.Core.Operations.ValidateContent
         {
             var actual = Task.FromResult<IReadOnlyList<IAssetInfo>>(assets.ToList());
 
-            return new ValidationContext(Guid.NewGuid(), Guid.NewGuid(), (x, y) => EmptyReferences, x => actual);
+            return new ValidationContext(Guid.NewGuid(), Guid.NewGuid(), (x, y) => EmptyReferences, x => EmptyReferences, x => actual);
         }
 
-        public static ValidationContext References(params Guid[] referencesIds)
+        public static ValidationContext References(params (Guid Id, Guid SchemaId)[] referencesIds)
         {
-            var actual = Task.FromResult<IReadOnlyList<Guid>>(referencesIds.ToList());
+            var actual = Task.FromResult<IReadOnlyList<(Guid Id, Guid SchemaId)>>(referencesIds.ToList());
 
-            return new ValidationContext(Guid.NewGuid(), Guid.NewGuid(), (x, y) => actual, x => EmptyAssets);
+            return new ValidationContext(Guid.NewGuid(), Guid.NewGuid(), (x, y) => actual, x => actual, x => EmptyAssets);
         }
     }
 }

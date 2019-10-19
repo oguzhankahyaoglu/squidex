@@ -6,15 +6,10 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
-    AppClientDto,
-    AppsState,
-    AttachClientForm,
+    ClientDto,
     ClientsState,
-    CreateAppClientDto,
     RolesState
 } from '@app/shared';
 
@@ -24,46 +19,23 @@ import {
     templateUrl: './clients-page.component.html'
 })
 export class ClientsPageComponent implements OnInit {
-    public addClientForm = new AttachClientForm(this.formBuilder);
-
     constructor(
-        public readonly appsState: AppsState,
         public readonly clientsState: ClientsState,
-        public readonly rolesState: RolesState,
-        private readonly formBuilder: FormBuilder
+        public readonly rolesState: RolesState
     ) {
     }
 
     public ngOnInit() {
-        this.rolesState.load().pipe(onErrorResumeNext()).subscribe();
+        this.rolesState.load();
 
-        this.clientsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.clientsState.load();
     }
 
     public reload() {
-        this.clientsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.clientsState.load(true);
     }
 
-    public attachClient() {
-        const value = this.addClientForm.submit();
-
-        if (value) {
-            const requestDto = new CreateAppClientDto(value.name);
-
-            this.clientsState.attach(requestDto)
-                .subscribe(() => {
-                    this.addClientForm.submitCompleted();
-                }, error => {
-                    this.addClientForm.submitFailed(error);
-                });
-        }
-    }
-
-    public cancelAttachClient() {
-        this.addClientForm.submitCompleted();
-    }
-
-    public trackByClient(index: number, item: AppClientDto) {
-        return item.id;
+    public trackByClient(index: number, client: ClientDto) {
+        return client.id;
     }
 }

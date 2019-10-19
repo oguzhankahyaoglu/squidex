@@ -28,11 +28,25 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
         }
 
         [RuleAction(
-           IconImage = "<svg></svg>",
-           IconColor = "#1e5470",
-           Display = "Action display",
-           Description = "Action description.",
-           ReadMore = "https://www.readmore.com/")]
+            Title = "Invalid",
+            IconImage = "<svg></svg>",
+            IconColor = "#1e5470",
+            Display = "Action display",
+            Description = "Action description.",
+            ReadMore = "https://www.readmore.com/")]
+        public sealed class MyInvalidRuleAction : RuleAction
+        {
+            [DataType(DataType.Custom)]
+            public string Custom { get; set; }
+        }
+
+        [RuleAction(
+            Title = "Action",
+            IconImage = "<svg></svg>",
+            IconColor = "#1e5470",
+            Display = "Action display",
+            Description = "Action description.",
+            ReadMore = "https://www.readmore.com/")]
         public sealed class MyRuleAction : RuleAction
         {
             [Required]
@@ -53,16 +67,16 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
             [DataType(DataType.Password)]
             public string Password { get; set; }
 
-            [DataType(DataType.Custom)]
+            [DataType(DataType.Text)]
             public bool Boolean { get; set; }
 
-            [DataType(DataType.Custom)]
+            [DataType(DataType.Text)]
             public bool? BooleanOptional { get; set; }
 
-            [DataType(DataType.Custom)]
+            [DataType(DataType.Text)]
             public int Number { get; set; }
 
-            [DataType(DataType.Custom)]
+            [DataType(DataType.Text)]
             public int? NumberOptional { get; set; }
         }
 
@@ -72,6 +86,7 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
             var expected = new RuleActionDefinition
             {
                 Type = typeof(MyRuleAction),
+                Title = "Action",
                 IconImage = "<svg></svg>",
                 IconColor = "#1e5470",
                 Display = "Action display",
@@ -166,6 +181,12 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
             var currentDefinition = sut.Actions.Values.First();
 
             currentDefinition.Should().BeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void Should_throw_exception_if_validation_attribute_used_incorrectly()
+        {
+            Assert.Throws<InvalidOperationException>(() => sut.Add<MyInvalidRuleAction>());
         }
     }
 }

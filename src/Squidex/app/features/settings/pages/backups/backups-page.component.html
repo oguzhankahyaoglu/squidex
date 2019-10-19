@@ -1,4 +1,4 @@
-<sqx-title message="{app} | Backups | Settings" parameter1="app" [value1]="appsState.appName"></sqx-title>
+<sqx-title message="Backups"></sqx-title>
 
 <sqx-panel desiredWidth="50rem" [showSidebar]="true">
     <ng-container title>
@@ -12,7 +12,7 @@
 
         <sqx-shortcut keys="ctrl+shift+r" (trigger)="reload()"></sqx-shortcut>
 
-        <button type="button" class="btn btn-success" [disabled]="backupsState.maxBackupsReached | async" (click)="start()">
+        <button type="button" class="btn btn-success" [disabled]="backupsState.maxBackupsReached | async" *ngIf="backupsState.canCreate | async" (click)="start()">
             Start Backup
         </button>
     </ng-container>
@@ -30,63 +30,10 @@
                     Start Backup
                 </button>
             </div>
-            
-            <div class="table-items-row" *ngFor="let backup of backups; trackBy: trackByBackup">
-                <div class="row">
-                    <div class="col-auto">
-                        <div *ngIf="backup.status === 'Started'" class="backup-status backup-status-pending spin">
-                            <i class="icon-hour-glass"></i>
-                        </div>
-                        <div *ngIf="backup.status === 'Failed'" class="backup-status backup-status-failed">
-                            <i class="icon-exclamation"></i>
-                        </div>
-                        <div *ngIf="backup.status === 'Completed'" class="backup-status backup-status-success">
-                            <i class="icon-checkmark"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div>
-                            Started:
-                        </div>
-                        <div>
-                            Duration:
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div>
-                            {{backup.started | sqxFromNow}}
-                        </div>
-                        <div *ngIf="backup.stopped">
-                            {{backup | sqxBackupDuration}}
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div>
-                            <span title="Archived events">
-                                Events: <strong class="backup-progress">{{backup.handledEvents | sqxKNumber}}</strong>
-                            </span>, 
-                            <span title="Archived assets">
-                                Assets: <strong class="backup-progress">{{backup.handledAssets | sqxKNumber}}</strong> 
-                            </span>
-                        </div>
-                        <div *ngIf="backup.stopped && !backup.isFailed">
-                            Download:
 
-                            <a href="{{backup | sqxBackupDownloadUrl}}" sqxExternalLink="noicon">
-                                Ready <i class="icon-external-link"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <button type="button" class="btn btn-text-danger" 
-                            (sqxConfirmClick)="delete(backup)" 
-                            confirmTitle="Delete backup"
-                            confirmText="Do you really want to delete the backup?">
-                            <i class="icon-bin2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <sqx-backup *ngFor="let backup of backups; trackBy: trackByBackup"
+                [backup]="backup">
+            </sqx-backup>
         </ng-container>
     </ng-container>
 

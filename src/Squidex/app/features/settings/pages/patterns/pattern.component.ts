@@ -5,26 +5,33 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
-    AppPatternDto,
     EditPatternForm,
+    fadeAnimation,
+    PatternDto,
     PatternsState
 } from '@app/shared';
 
 @Component({
     selector: 'sqx-pattern',
     styleUrls: ['./pattern.component.scss'],
-    templateUrl: './pattern.component.html'
+    templateUrl: './pattern.component.html',
+    animations: [
+        fadeAnimation
+    ],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PatternComponent implements OnInit {
+export class PatternComponent implements OnChanges {
     @Input()
-    public pattern: AppPatternDto;
+    public pattern: PatternDto;
 
     public editForm = new EditPatternForm(this.formBuilder);
+
+    public isEditable = true;
+    public isDeletable = false;
 
     constructor(
         private readonly patternsState: PatternsState,
@@ -32,33 +39,43 @@ export class PatternComponent implements OnInit {
     ) {
     }
 
-    public ngOnInit() {
-        this.editForm.load(this.pattern);
+    public ngOnChanges(changes: SimpleChanges) {
+        if (changes['pattern']) {
+            this.isEditable = !this.pattern || this.pattern.canUpdate;
+            this.isDeletable = this.pattern && this.pattern.canDelete;
+
+            this.editForm.load(this.pattern);
+            this.editForm.setEnabled(this.isEditable);
+        }
     }
 
     public cancel() {
-        this.editForm.submitCompleted(this.pattern);
+        this.editForm.submitCompleted({ newValue: this.pattern });
     }
 
     public delete() {
-        this.patternsState.delete(this.pattern).pipe(onErrorResumeNext()).subscribe();
+        this.patternsState.delete(this.pattern);
     }
 
     public save() {
+        if (!this.isEditable) {
+            return;
+        }
+
         const value = this.editForm.submit();
 
         if (value) {
             if (this.pattern) {
                 this.patternsState.update(this.pattern, value)
-                    .subscribe(() => {
-                        this.editForm.submitCompleted();
+                    .subscribe(newPattern => {
+                        this.editForm.submitCompleted(newPattern);
                     }, error => {
                         this.editForm.submitFailed(error);
                     });
             } else {
                 this.patternsState.create(value)
                     .subscribe(() => {
-                        this.editForm.submitCompleted({});
+                        this.editForm.submitCompleted();
                     }, error => {
                         this.editForm.submitFailed(error);
                     });
@@ -66,4 +83,3 @@ export class PatternComponent implements OnInit {
         }
     }
 }
-

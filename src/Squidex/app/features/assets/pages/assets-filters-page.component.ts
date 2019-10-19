@@ -6,11 +6,12 @@
  */
 
 import { Component } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
     AssetsState,
     Queries,
+    Query,
+    SavedQuery,
     UIState
 } from '@app/shared';
 
@@ -20,7 +21,7 @@ import {
     templateUrl: './assets-filters-page.component.html'
 })
 export class AssetsFiltersPageComponent {
-    public queries = new Queries(this.uiState, 'assets');
+    public assetsQueries = new Queries(this.uiState, 'assets');
 
     constructor(
         public readonly assetsState: AssetsState,
@@ -28,31 +29,27 @@ export class AssetsFiltersPageComponent {
     ) {
     }
 
-    public search(query: string) {
-        this.assetsState.search(query).pipe(onErrorResumeNext()).subscribe();
+    public isQueryUsed = (query: SavedQuery) => {
+        return this.assetsState.isQueryUsed(query);
     }
 
-    public selectTags(tags: string[]) {
-        this.assetsState.selectTags(tags).pipe(onErrorResumeNext()).subscribe();
+    public search(query: Query) {
+        this.assetsState.search(query);
+    }
+
+    public selectTags(tags: ReadonlyArray<string>) {
+        this.assetsState.selectTags(tags);
     }
 
     public toggleTag(tag: string) {
-        this.assetsState.toggleTag(tag).pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.toggleTag(tag);
     }
 
     public resetTags() {
-        this.assetsState.resetTags().pipe(onErrorResumeNext()).subscribe();
-    }
-
-    public isSelectedQuery(query: string) {
-        return query === this.assetsState.snapshot.assetsQuery || (!query && !this.assetsState.assetsQuery);
+        this.assetsState.resetTags();
     }
 
     public trackByTag(index: number, tag: { name: string }) {
         return tag.name;
-    }
-
-    public trackByQuery(index: number, query: { name: string }) {
-        return query.name;
     }
 }

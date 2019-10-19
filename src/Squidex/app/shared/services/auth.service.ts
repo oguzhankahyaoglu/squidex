@@ -16,17 +16,15 @@ import {
     WebStorageStateStore
 } from 'oidc-client';
 
-import {
-    ApiUrlConfig,
-    Permission,
-    Types
-} from '@app/framework';
+import { ApiUrlConfig, Types } from '@app/framework';
 
 export class Profile {
-    public readonly permissions: Permission[];
-
     public get id(): string {
         return this.user.profile['sub'];
+    }
+
+    public get email(): string {
+        return this.user.profile['email'];
     }
 
     public get displayName(): string {
@@ -52,19 +50,6 @@ export class Profile {
     constructor(
         public readonly user: User
     ) {
-        const permissions = this.user.profile['urn:squidex:permissions'];
-
-        if (Types.isArrayOfString(permissions)) {
-            this.permissions = permissions.map(x => new Permission(x));
-        } else if (Types.isString(permissions)) {
-            this.permissions = [new Permission(permissions)];
-        } else {
-            this.permissions = [];
-        }
-
-        if (this.user.profile['role'] === 'ADMINISTRATOR') {
-            this.permissions.push( new Permission('squidex.admin'));
-        }
     }
 }
 
@@ -90,15 +75,15 @@ export class AuthService {
         Log.logger = console;
 
         this.userManager = new UserManager({
-                       client_id: 'squidex-frontend',
-                           scope: 'squidex-api openid profile email squidex-profile role permissions',
-                   response_type: 'id_token token',
-                    redirect_uri: apiUrl.buildUrl('login;'),
-        post_logout_redirect_uri: apiUrl.buildUrl('logout'),
-             silent_redirect_uri: apiUrl.buildUrl('client-callback-silent'),
-              popup_redirect_uri: apiUrl.buildUrl('client-callback-popup'),
-                       authority: apiUrl.buildUrl('identity-server/'),
-                       userStore: new WebStorageStateStore({ store: window.localStorage || window.sessionStorage }),
+            client_id: 'squidex-frontend',
+            scope: 'squidex-api openid profile email squidex-profile role permissions',
+            response_type: 'id_token token',
+            redirect_uri: apiUrl.buildUrl('login;'),
+            post_logout_redirect_uri: apiUrl.buildUrl('logout'),
+            silent_redirect_uri: apiUrl.buildUrl('client-callback-silent'),
+            popup_redirect_uri: apiUrl.buildUrl('client-callback-popup'),
+            authority: apiUrl.buildUrl('identity-server/'),
+            userStore: new WebStorageStateStore({ store: window.localStorage || window.sessionStorage }),
             automaticSilentRenew: true
         });
 
@@ -118,7 +103,7 @@ export class AuthService {
     }
 
     public logoutRedirect() {
-       this.userManager.signoutRedirect();
+        this.userManager.signoutRedirect();
     }
 
     public loginRedirect() {

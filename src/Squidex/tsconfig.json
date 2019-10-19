@@ -1,11 +1,14 @@
 {
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "incremental": true,
     "importHelpers": true,
     "lib": ["es6", "esnext", "dom"],
     "moduleResolution": "node",
+    "module": "esnext",
     "noEmitHelpers": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
@@ -22,7 +25,6 @@
     }
   },
   "angularCompilerOptions": { 
-    "fullTemplateTypeCheck": true,
-    "strictInjectionParameters": true
+    "fullTemplateTypeCheck": true
   }
 }

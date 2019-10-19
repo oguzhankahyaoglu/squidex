@@ -33,7 +33,7 @@ using Squidex.Infrastructure.Diagnostics;
 using Squidex.Infrastructure.EventSourcing;
 using Squidex.Infrastructure.Json;
 using Squidex.Infrastructure.Migrations;
-using Squidex.Infrastructure.MongoDb;
+using Squidex.Infrastructure.Reflection;
 using Squidex.Infrastructure.States;
 using Squidex.Infrastructure.UsageTracking;
 
@@ -50,8 +50,6 @@ namespace Squidex.Config.Domain
                     var mongoConfiguration = config.GetRequiredValue("store:mongoDb:configuration");
                     var mongoDatabaseName = config.GetRequiredValue("store:mongoDb:database");
                     var mongoContentDatabaseName = config.GetOptionalValue("store:mongoDb:contentDatabase", mongoDatabaseName);
-
-                    services.Configure<MongoDbOptions>(config.GetSection("store:mongoDB"));
 
                     services.AddSingleton(typeof(ISnapshotStore<,>), typeof(MongoSnapshotStore<,>));
 
@@ -76,31 +74,31 @@ namespace Squidex.Config.Domain
                     services.AddTransientAs<ConvertRuleEventsJson>()
                         .As<IMigration>();
 
-                    services.AddTransientAs<RenameSlugField>()
+                    services.AddTransientAs<RenameAssetSlugField>()
                         .As<IMigration>();
 
                     services.AddHealthChecks()
                         .AddCheck<MongoDBHealthCheck>("MongoDB", tags: new[] { "node" });
 
                     services.AddSingletonAs<MongoUsageRepository>()
-                        .AsOptional<IUsageRepository>();
+                        .As<IUsageRepository>();
 
                     services.AddSingletonAs<MongoRuleEventRepository>()
-                        .AsOptional<IRuleEventRepository>();
+                        .As<IRuleEventRepository>();
 
                     services.AddSingletonAs<MongoHistoryEventRepository>()
-                        .AsOptional<IHistoryEventRepository>();
+                        .As<IHistoryEventRepository>();
 
                     services.AddSingletonAs<MongoRoleStore>()
-                        .AsOptional<IRoleStore<IdentityRole>>();
+                        .As<IRoleStore<IdentityRole>>();
 
                     services.AddSingletonAs<MongoUserStore>()
-                        .AsOptional<IUserStore<IdentityUser>>()
-                        .AsOptional<IUserFactory>();
+                        .As<IUserStore<IdentityUser>>()
+                        .As<IUserFactory>();
 
                     services.AddSingletonAs<MongoAssetRepository>()
-                        .AsOptional<IAssetRepository>()
-                        .AsOptional<ISnapshotStore<AssetState, Guid>>();
+                        .As<IAssetRepository>()
+                        .As<ISnapshotStore<AssetState, Guid>>();
 
                     services.AddSingletonAs(c => new MongoContentRepository(
                             c.GetRequiredService<IMongoClient>().GetDatabase(mongoContentDatabaseName),
@@ -108,9 +106,9 @@ namespace Squidex.Config.Domain
                             c.GetRequiredService<IJsonSerializer>(),
                             c.GetRequiredService<ITextIndexer>(),
                             c.GetRequiredService<TypeNameRegistry>()))
-                        .AsOptional<IContentRepository>()
-                        .AsOptional<ISnapshotStore<ContentState, Guid>>()
-                        .AsOptional<IEventConsumer>();
+                        .As<IContentRepository>()
+                        .As<ISnapshotStore<ContentState, Guid>>()
+                        .As<IEventConsumer>();
 
                     var registration = services.FirstOrDefault(x => x.ServiceType == typeof(IPersistedGrantStore));
 

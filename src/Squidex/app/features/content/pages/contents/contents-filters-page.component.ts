@@ -6,12 +6,13 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
     ContentsState,
     Queries,
+    Query,
     ResourceOwner,
+    SavedQuery,
     SchemasState,
     UIState
 } from '@app/shared';
@@ -25,7 +26,7 @@ export class ContentsFiltersPageComponent extends ResourceOwner implements OnIni
     public schemaQueries: Queries;
 
     constructor(
-        private readonly contentsState: ContentsState,
+        public readonly contentsState: ContentsState,
         private readonly schemasState: SchemasState,
         private readonly uiState: UIState
     ) {
@@ -36,22 +37,16 @@ export class ContentsFiltersPageComponent extends ResourceOwner implements OnIni
         this.own(
             this.schemasState.selectedSchema
                 .subscribe(schema => {
-                    if (schema) {
-                        this.schemaQueries = new Queries(this.uiState, `schemas.${schema.name}`);
-                    }
+                    this.schemaQueries = new Queries(this.uiState, `schemas.${schema.name}`);
                 }));
     }
 
-    public search(query: string) {
-        this.contentsState.search(query).pipe(onErrorResumeNext()).subscribe();
+    public isQueryUsed = (query: SavedQuery) => {
+        return this.contentsState.isQueryUsed(query);
     }
 
-    public isSelectedQuery(query: string) {
-        return query === this.contentsState.snapshot.contentsQuery || (!query && !this.contentsState.snapshot.contentsQuery);
-    }
-
-    public trackByTag(index: number, tag: { name: string }) {
-        return tag.name;
+    public search(query: Query) {
+        this.contentsState.search(query);
     }
 
     public trackByQuery(index: number, query: { name: string }) {

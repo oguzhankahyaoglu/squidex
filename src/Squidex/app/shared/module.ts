@@ -5,21 +5,17 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { ModuleWithProviders, NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { DndModule } from 'ng2-dnd';
 
 import { SqxFrameworkModule } from '@app/framework';
 
 import {
-    AppClientsService,
-    AppContributorsService,
     AppFormComponent,
     AppLanguagesService,
     AppMustExistGuard,
-    AppPatternsService,
-    AppRolesService,
     AppsService,
     AppsState,
     AssetComponent,
@@ -30,11 +26,15 @@ import {
     AssetsSelectorComponent,
     AssetsService,
     AssetsState,
+    AssetUploaderComponent,
+    AssetUploaderState,
     AssetUrlPipe,
     AuthInterceptor,
     AuthService,
+    AutoSaveService,
     BackupsService,
     BackupsState,
+    ClientsService,
     ClientsState,
     CommentComponent,
     CommentsComponent,
@@ -42,8 +42,12 @@ import {
     ContentMustExistGuard,
     ContentsService,
     ContentsState,
+    ContributorsService,
     ContributorsState,
     FileIconPipe,
+    FilterComparisonComponent,
+    FilterLogicalComponent,
+    FilterNodeComponent,
     GeolocationEditorComponent,
     GraphQlService,
     HelpComponent,
@@ -62,15 +66,19 @@ import {
     MustBeAuthenticatedGuard,
     MustBeNotAuthenticatedGuard,
     NewsService,
+    PatternsService,
     PatternsState,
-    PermissionDirective,
     PlansService,
     PlansState,
+    QueryComponent,
+    ReferencesDropdownComponent,
     RichEditorComponent,
+    RolesService,
     RolesState,
     RuleEventsState,
     RulesService,
     RulesState,
+    SavedQueriesComponent,
     SchemaCategoryComponent,
     SchemaMustExistGuard,
     SchemaMustExistPublishedGuard,
@@ -78,6 +86,8 @@ import {
     SchemasService,
     SchemasState,
     SearchFormComponent,
+    SortingComponent,
+    TableHeaderComponent,
     TranslationsService,
     UIService,
     UIState,
@@ -91,12 +101,15 @@ import {
     UserPicturePipe,
     UserPictureRefPipe,
     UsersProviderService,
-    UsersService
+    UsersService,
+    WorkflowsService,
+    WorkflowsState
 } from './declarations';
+import { SchemaTagConverter } from './state/schema-tag-converter';
 
 @NgModule({
     imports: [
-        DndModule,
+        DragDropModule,
         RouterModule,
         SqxFrameworkModule
     ],
@@ -108,9 +121,13 @@ import {
         AssetUrlPipe,
         AssetsListComponent,
         AssetsSelectorComponent,
+        AssetUploaderComponent,
         CommentComponent,
         CommentsComponent,
         FileIconPipe,
+        FilterNodeComponent,
+        FilterLogicalComponent,
+        FilterComparisonComponent,
         GeolocationEditorComponent,
         HelpComponent,
         HelpMarkdownPipe,
@@ -119,8 +136,11 @@ import {
         HistoryMessagePipe,
         LanguageSelectorComponent,
         MarkdownEditorComponent,
-        PermissionDirective,
+        QueryComponent,
+        ReferencesDropdownComponent,
+        SavedQueriesComponent,
         SchemaCategoryComponent,
+        SortingComponent,
         UserDtoPicture,
         UserIdPicturePipe,
         UserNamePipe,
@@ -128,7 +148,8 @@ import {
         UserPicturePipe,
         UserPictureRefPipe,
         RichEditorComponent,
-        SearchFormComponent
+        SearchFormComponent,
+        TableHeaderComponent
     ],
     exports: [
         AppFormComponent,
@@ -138,8 +159,10 @@ import {
         AssetUrlPipe,
         AssetsListComponent,
         AssetsSelectorComponent,
+        AssetUploaderComponent,
         CommentComponent,
         CommentsComponent,
+        DragDropModule,
         FileIconPipe,
         GeolocationEditorComponent,
         HelpComponent,
@@ -149,8 +172,10 @@ import {
         HistoryMessagePipe,
         LanguageSelectorComponent,
         MarkdownEditorComponent,
-        PermissionDirective,
+        ReferencesDropdownComponent,
+        RichEditorComponent,
         RouterModule,
+        SavedQueriesComponent,
         SchemaCategoryComponent,
         SearchFormComponent,
         UserDtoPicture,
@@ -159,7 +184,7 @@ import {
         UserNameRefPipe,
         UserPicturePipe,
         UserPictureRefPipe,
-        RichEditorComponent
+        TableHeaderComponent
     ],
     providers: [
         AssetsDialogState
@@ -170,24 +195,24 @@ export class SqxSharedModule {
         return {
             ngModule: SqxSharedModule,
             providers: [
-                AppClientsService,
-                AppContributorsService,
                 AppLanguagesService,
                 AppMustExistGuard,
-                AppPatternsService,
-                AppRolesService,
                 AppsService,
                 AppsState,
-                AssetsState,
                 AssetsService,
+                AssetsState,
+                AssetUploaderState,
                 AuthService,
+                AutoSaveService,
                 BackupsService,
                 BackupsState,
+                ClientsService,
                 ClientsState,
                 CommentsService,
                 ContentMustExistGuard,
                 ContentsService,
                 ContentsState,
+                ContributorsService,
                 ContributorsState,
                 GraphQlService,
                 HelpService,
@@ -199,9 +224,11 @@ export class SqxSharedModule {
                 MustBeAuthenticatedGuard,
                 MustBeNotAuthenticatedGuard,
                 NewsService,
+                PatternsService,
                 PatternsState,
                 PlansService,
                 PlansState,
+                RolesService,
                 RolesState,
                 RuleEventsState,
                 RulesService,
@@ -211,6 +238,7 @@ export class SqxSharedModule {
                 SchemaMustNotBeSingletonGuard,
                 SchemasService,
                 SchemasState,
+                SchemaTagConverter,
                 TranslationsService,
                 UIService,
                 UIState,
@@ -219,6 +247,8 @@ export class SqxSharedModule {
                 UsagesService,
                 UsersProviderService,
                 UsersService,
+                WorkflowsService,
+                WorkflowsState,
                 {
                     provide: HTTP_INTERCEPTORS,
                     useClass: AuthInterceptor,

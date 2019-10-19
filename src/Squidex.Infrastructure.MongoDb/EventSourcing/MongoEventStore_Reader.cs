@@ -26,7 +26,8 @@ namespace Squidex.Infrastructure.EventSourcing
             Guard.NotNullOrEmpty(property, nameof(property));
 
             return Collection.Indexes.CreateOneAsync(
-                new CreateIndexModel<MongoEventCommit>(Index.Ascending(CreateIndexPath(property))));
+                new CreateIndexModel<MongoEventCommit>(
+                    Index.Ascending(CreateIndexPath(property))));
         }
 
         public IEventSubscription CreateSubscription(IEventSubscriber subscriber, string streamFilter = null, string position = null)
@@ -106,7 +107,7 @@ namespace Squidex.Infrastructure.EventSourcing
         {
             using (Profiler.TraceMethod<MongoEventStore>())
             {
-                await Collection.Find(filterDefinition).Sort(Sort.Ascending(TimestampField)).ForEachPipelineAsync(async commit =>
+                await Collection.Find(filterDefinition, options: Batching.Options).Sort(Sort.Ascending(TimestampField)).ForEachPipelineAsync(async commit =>
                 {
                     var eventStreamOffset = (int)commit.EventStreamOffset;
 

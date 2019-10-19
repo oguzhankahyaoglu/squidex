@@ -9,8 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Squidex.Domain.Apps.Core.Contents;
-using Squidex.Infrastructure;
 using Squidex.Infrastructure.Assets;
+using Squidex.Infrastructure.Validation;
 using Xunit;
 
 namespace Squidex.Domain.Apps.Entities.Contents.Text
@@ -51,7 +51,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
         {
             await AddInvariantContent("Hello", "World", false);
 
-            await sut.DeactivateAsync();
+            await sut.DeactivateAsync(true);
 
             var other = new TextIndexerGrain(assetStore);
             try
@@ -115,7 +115,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
         }
 
         [Fact]
-         public async Task Should_simulate_content_reversion()
+        public async Task Should_simulate_content_reversion()
         {
             await AddInvariantContent("Hello", "World", false);
 
@@ -137,13 +137,13 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
             await TestSearchAsync(null, "Hallo", Scope.Draft);
             await TestSearchAsync(null, "Hallo", Scope.Published);
 
-            await AddInvariantContent("Hallo", "Welt", true);
+            await AddInvariantContent("Guten Morgen", "Welt", true);
 
             await TestSearchAsync(null, "Hello", Scope.Draft);
             await TestSearchAsync(ids1, "Hello", Scope.Published);
 
-            await TestSearchAsync(ids1, "Hallo", Scope.Draft);
-            await TestSearchAsync(null, "Hallo", Scope.Published);
+            await TestSearchAsync(ids1, "Guten Morgen", Scope.Draft);
+            await TestSearchAsync(null, "Guten Morgen", Scope.Published);
         }
 
         [Fact]
@@ -154,7 +154,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
             await TestSearchAsync(ids1, "Hello", Scope.Draft);
             await TestSearchAsync(null, "Hello", Scope.Published);
 
-            await CopyAsync(false);
+            await CopyAsync(true);
 
             await TestSearchAsync(ids1, "Hello", Scope.Draft);
             await TestSearchAsync(ids1, "Hello", Scope.Published);
@@ -211,8 +211,8 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
                         new ContentFieldData()
                             .AddValue("en", "City and Surroundings und sonstiges"));
 
-            await sut.IndexAsync(ids1[0], new IndexData { Data = germanData }, true);
-            await sut.IndexAsync(ids2[0], new IndexData { Data = englishData }, true);
+            await sut.IndexAsync(new Update { Id = ids1[0], Data = germanData, OnlyDraft = true });
+            await sut.IndexAsync(new Update { Id = ids2[0], Data = englishData, OnlyDraft = true });
         }
 
         private async Task AddInvariantContent(string text1, string text2, bool onlyDraft = false)
@@ -229,8 +229,8 @@ namespace Squidex.Domain.Apps.Entities.Contents.Text
                         new ContentFieldData()
                             .AddValue("iv", text2));
 
-            await sut.IndexAsync(ids1[0], new IndexData { Data = data1 }, onlyDraft);
-            await sut.IndexAsync(ids2[0], new IndexData { Data = data2 }, onlyDraft);
+            await sut.IndexAsync(new Update { Id = ids1[0], Data = data1, OnlyDraft = onlyDraft });
+            await sut.IndexAsync(new Update { Id = ids2[0], Data = data2, OnlyDraft = onlyDraft });
         }
 
         private async Task DeleteAsync(Guid id)

@@ -10,7 +10,7 @@ import { timer } from 'rxjs';
 import { onErrorResumeNext, switchMap } from 'rxjs/operators';
 
 import {
-    AppsState,
+    ApiUrlConfig,
     BackupDto,
     BackupsState,
     ResourceOwner
@@ -23,14 +23,14 @@ import {
 })
 export class BackupsPageComponent extends ResourceOwner implements OnInit {
     constructor(
-        public readonly appsState: AppsState,
+        public readonly apiUrl: ApiUrlConfig,
         public readonly backupsState: BackupsState
     ) {
         super();
     }
 
     public ngOnInit() {
-        this.backupsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.backupsState.load();
 
         this.own(
             timer(3000, 3000).pipe(switchMap(() => this.backupsState.load(true, true).pipe(onErrorResumeNext())))
@@ -38,19 +38,14 @@ export class BackupsPageComponent extends ResourceOwner implements OnInit {
     }
 
     public reload() {
-        this.backupsState.load(true, false).pipe(onErrorResumeNext()).subscribe();
+        this.backupsState.load(true, false);
     }
 
     public start() {
-        this.backupsState.start().pipe(onErrorResumeNext()).subscribe();
-    }
-
-    public delete(backup: BackupDto) {
-        this.backupsState.delete(backup).pipe(onErrorResumeNext()).subscribe();
+        this.backupsState.start();
     }
 
     public trackByBackup(index: number, item: BackupDto) {
         return item.id;
     }
 }
-

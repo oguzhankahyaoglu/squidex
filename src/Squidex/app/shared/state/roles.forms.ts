@@ -13,7 +13,11 @@ import {
     hasValue$
 } from '@app/framework';
 
-export class EditPermissionsForm extends Form<FormArray> {
+export class EditPermissionsForm extends Form<FormArray, ReadonlyArray<string>> {
+    public get controls() {
+        return this.form.controls as FormControl[];
+    }
+
     constructor() {
         super(new FormArray([]));
     }
@@ -26,7 +30,7 @@ export class EditPermissionsForm extends Form<FormArray> {
         this.form.removeAt(index);
     }
 
-    public load(permissions: string[]) {
+    public load(permissions: ReadonlyArray<string>) {
         while (this.form.controls.length < permissions.length) {
             this.add();
         }
@@ -39,12 +43,12 @@ export class EditPermissionsForm extends Form<FormArray> {
     }
 }
 
-export class AddPermissionForm extends Form<FormGroup> {
+export class AddPermissionForm extends Form<FormGroup, { permission: string }> {
     public hasPermission = hasValue$(this.form.controls['permission']);
 
     constructor(formBuilder: FormBuilder) {
         super(formBuilder.group({
-            permission: [null,
+            permission: ['',
                 [
                     Validators.required
                 ]
@@ -53,12 +57,12 @@ export class AddPermissionForm extends Form<FormGroup> {
     }
 }
 
-export class AddRoleForm extends Form<FormGroup> {
+export class AddRoleForm extends Form<FormGroup, { name: string }> {
     public hasNoName = hasNoValue$(this.form.controls['name']);
 
     constructor(formBuilder: FormBuilder) {
         super(formBuilder.group({
-            name: [null,
+            name: ['',
                 [
                     Validators.required
                 ]

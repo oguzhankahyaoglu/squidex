@@ -7,13 +7,13 @@
 
 import { Component, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
-    AppsState,
     AssetsState,
     LocalStoreService,
     Queries,
+    Query,
+    ResourceOwner,
     UIState
 } from '@app/shared';
 
@@ -22,7 +22,7 @@ import {
     styleUrls: ['./assets-page.component.scss'],
     templateUrl: './assets-page.component.html'
 })
-export class AssetsPageComponent implements OnInit {
+export class AssetsPageComponent extends ResourceOwner implements OnInit {
     public assetsFilter = new FormControl();
 
     public queries = new Queries(this.uiState, 'assets');
@@ -30,40 +30,41 @@ export class AssetsPageComponent implements OnInit {
     public isListView: boolean;
 
     constructor(
-        public readonly appsState: AppsState,
         public readonly assetsState: AssetsState,
         private readonly localStore: LocalStoreService,
         private readonly uiState: UIState
     ) {
+        super();
+
         this.isListView = this.localStore.getBoolean('squidex.assets.list-view');
     }
 
     public ngOnInit() {
-        this.assetsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.load();
     }
 
     public reload() {
-        this.assetsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.load(true);
     }
 
-    public search(query: string) {
-        this.assetsState.search(query).pipe(onErrorResumeNext()).subscribe();
+    public search(query: Query) {
+        this.assetsState.search(query);
     }
 
-    public selectTags(tags: string[]) {
-        this.assetsState.selectTags(tags).pipe(onErrorResumeNext()).subscribe();
+    public selectTags(tags: ReadonlyArray<string>) {
+        this.assetsState.selectTags(tags);
     }
 
     public toggleTag(tag: string) {
-        this.assetsState.toggleTag(tag).pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.toggleTag(tag);
     }
 
     public goNext() {
-        this.assetsState.goNext().pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.goNext();
     }
 
     public goPrev() {
-        this.assetsState.goPrev().pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.goPrev();
     }
 
     public changeView(isListView: boolean) {
@@ -72,4 +73,3 @@ export class AssetsPageComponent implements OnInit {
         this.localStore.setBoolean('squidex.assets.list-view', isListView);
     }
 }
-

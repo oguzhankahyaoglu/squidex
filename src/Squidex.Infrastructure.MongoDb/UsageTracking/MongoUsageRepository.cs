@@ -32,7 +32,12 @@ namespace Squidex.Infrastructure.UsageTracking
         protected override Task SetupCollectionAsync(IMongoCollection<MongoUsage> collection, CancellationToken ct = default)
         {
             return collection.Indexes.CreateOneAsync(
-                new CreateIndexModel<MongoUsage>(Index.Ascending(x => x.Key).Ascending(x => x.Category).Ascending(x => x.Date)), cancellationToken: ct);
+                new CreateIndexModel<MongoUsage>(
+                    Index
+                        .Ascending(x => x.Key)
+                        .Ascending(x => x.Category)
+                        .Ascending(x => x.Date)),
+                cancellationToken: ct);
         }
 
         public async Task TrackUsagesAsync(UsageUpdate update)
@@ -76,7 +81,6 @@ namespace Squidex.Infrastructure.UsageTracking
             var id = $"{usageUpdate.Key}_{usageUpdate.Date:yyyy-MM-dd}_{usageUpdate.Category}";
 
             var update = Update
-                .SetOnInsert(x => x.Id, id)
                 .SetOnInsert(x => x.Key, usageUpdate.Key)
                 .SetOnInsert(x => x.Date, usageUpdate.Date)
                 .SetOnInsert(x => x.Category, usageUpdate.Category);

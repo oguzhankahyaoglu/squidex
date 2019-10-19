@@ -31,6 +31,8 @@ export class SchemaPreviewUrlsFormComponent implements OnInit {
 
     public editForm = new ConfigurePreviewUrlsForm(this.formBuilder);
 
+    public isEditable = false;
+
     constructor(
         private readonly formBuilder: FormBuilder,
         private readonly schemasState: SchemasState
@@ -38,7 +40,10 @@ export class SchemaPreviewUrlsFormComponent implements OnInit {
     }
 
     public ngOnInit() {
+        this.isEditable = this.schema.canUpdateUrls;
+
         this.editForm.load(this.schema.previewUrls);
+        this.editForm.setEnabled(this.isEditable);
     }
 
     public emitComplete() {
@@ -46,20 +51,28 @@ export class SchemaPreviewUrlsFormComponent implements OnInit {
     }
 
     public cancelAdd() {
-        this.addForm.submitCompleted({});
+        this.addForm.submitCompleted();
     }
 
     public add() {
+        if (!this.isEditable) {
+            return;
+        }
+
         const value = this.addForm.submit();
 
         if (value) {
             this.editForm.add(value);
 
-            this.addForm.submitCompleted({});
+            this.cancelAdd();
         }
     }
 
     public saveSchema() {
+        if (!this.isEditable) {
+            return;
+        }
+
         const value = this.editForm.submit();
 
         if (value) {

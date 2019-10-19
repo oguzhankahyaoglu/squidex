@@ -20,7 +20,6 @@ using Squidex.Domain.Apps.Entities.Schemas;
 using Squidex.Domain.Apps.Entities.Schemas.Commands;
 using Squidex.Infrastructure;
 using Squidex.Infrastructure.Commands;
-using Squidex.Web.Pipeline;
 using Xunit;
 
 namespace Squidex.Web.CommandMiddlewares
@@ -44,59 +43,45 @@ namespace Squidex.Web.CommandMiddlewares
             A.CallTo(() => actionContextAccessor.ActionContext)
                 .Returns(actionContext);
 
-            var appEntity = A.Fake<IAppEntity>();
+            var app = A.Fake<IAppEntity>();
 
-            A.CallTo(() => appEntity.Id).Returns(appId.Id);
-            A.CallTo(() => appEntity.Name).Returns(appId.Name);
+            A.CallTo(() => app.Id).Returns(appId.Id);
+            A.CallTo(() => app.Name).Returns(appId.Name);
 
-            httpContext.Features.Set<IAppFeature>(new AppResolver.AppFeature(appEntity));
+            httpContext.Context().App = app;
 
-            var schemaEntity = A.Fake<ISchemaEntity>();
+            var schema = A.Fake<ISchemaEntity>();
 
-            A.CallTo(() => schemaEntity.Id).Returns(schemaId.Id);
-            A.CallTo(() => schemaEntity.SchemaDef).Returns(new Schema(schemaId.Name));
+            A.CallTo(() => schema.Id).Returns(schemaId.Id);
+            A.CallTo(() => schema.SchemaDef).Returns(new Schema(schemaId.Name));
 
             A.CallTo(() => appProvider.GetSchemaAsync(appId.Id, schemaId.Name))
-                .Returns(schemaEntity);
+                .Returns(schema);
             A.CallTo(() => appProvider.GetSchemaAsync(appId.Id, schemaId.Id, false))
-                .Returns(schemaEntity);
+                .Returns(schema);
 
             sut = new EnrichWithSchemaIdCommandMiddleware(appProvider, actionContextAccessor);
         }
 
         [Fact]
-        public async Task Should_throw_exception_if_app_not_found()
+        public async Task Should_throw_exception_if_schema_not_found()
         {
             A.CallTo(() => appProvider.GetSchemaAsync(appId.Id, "other-schema"))
                 .Returns(Task.FromResult<ISchemaEntity>(null));
 
             actionContext.RouteData.Values["name"] = "other-schema";
 
-            var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
+            var command = new CreateContent { AppId = appId };
+            var context = Ctx(command);
 
             await Assert.ThrowsAsync<DomainObjectNotFoundException>(() => sut.HandleAsync(context));
-        }
-
-        [Fact]
-        public async Task Should_do_nothing_when_context_is_null()
-        {
-            A.CallTo(() => actionContextAccessor.ActionContext)
-                .Returns(null);
-
-            var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
-
-            await sut.HandleAsync(context);
-
-            Assert.Null(command.Actor);
         }
 
         [Fact]
         public async Task Should_do_nothing_when_route_has_no_parameter()
         {
             var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -108,8 +93,8 @@ namespace Squidex.Web.CommandMiddlewares
         {
             actionContext.RouteData.Values["name"] = schemaId.Name;
 
-            var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
+            var command = new CreateContent { AppId = appId };
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -119,10 +104,10 @@ namespace Squidex.Web.CommandMiddlewares
         [Fact]
         public async Task Should_assign_schema_id_and_name_from_id()
         {
-            actionContext.RouteData.Values["name"] = schemaId.Name;
+            actionContext.RouteData.Values["name"] = schemaId.Id;
 
-            var command = new CreateContent();
-            var context = new CommandContext(command, commandBus);
+            var command = new CreateContent { AppId = appId };
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -135,7 +120,7 @@ namespace Squidex.Web.CommandMiddlewares
             actionContext.RouteData.Values["name"] = schemaId.Name;
 
             var command = new UpdateSchema();
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -143,23 +128,10 @@ namespace Squidex.Web.CommandMiddlewares
         }
 
         [Fact]
-        public async Task Should_use_app_id_from_command()
-        {
-            actionContext.RouteData.Values["name"] = schemaId.Name;
-
-            var command = new CreateContent { AppId = appId };
-            var context = new CommandContext(command, commandBus);
-
-            await sut.HandleAsync(context);
-
-            Assert.Equal(schemaId, command.SchemaId);
-        }
-
-        [Fact]
         public async Task Should_not_override_schema_id()
         {
             var command = new CreateSchema { SchemaId = Guid.NewGuid() };
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
@@ -170,11 +142,16 @@ namespace Squidex.Web.CommandMiddlewares
         public async Task Should_not_override_schema_id_and_name()
         {
             var command = new CreateContent { SchemaId = NamedId.Of(Guid.NewGuid(), "other-schema") };
-            var context = new CommandContext(command, commandBus);
+            var context = Ctx(command);
 
             await sut.HandleAsync(context);
 
             Assert.NotEqual(appId, command.AppId);
+        }
+
+        private CommandContext Ctx(ICommand command)
+        {
+            return new CommandContext(command, commandBus);
         }
     }
 }

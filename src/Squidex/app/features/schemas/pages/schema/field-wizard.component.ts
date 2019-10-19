@@ -18,9 +18,10 @@ import {
     RootFieldDto,
     SchemaDetailsDto,
     SchemasState,
-    Types,
-    UpdateFieldDto
+    Types
 } from '@app/shared';
+
+const DEFAULT_FIELD = { name: '', partitioning: 'invariant', properties: createProperties('String') };
 
 @Component({
     selector: 'sqx-field-wizard',
@@ -28,7 +29,7 @@ import {
     templateUrl: './field-wizard.component.html'
 })
 export class FieldWizardComponent implements OnInit {
-    @ViewChild('nameInput')
+    @ViewChild('nameInput', { static: false })
     public nameInput: ElementRef<HTMLElement>;
 
     @Input()
@@ -45,10 +46,8 @@ export class FieldWizardComponent implements OnInit {
 
     public addFieldForm = new AddFieldForm(this.formBuilder);
 
+    public editing = false;
     public editForm = new EditFieldForm(this.formBuilder);
-
-    public isEditing = false;
-    public selectedTab = 0;
 
     constructor(
         private readonly formBuilder: FormBuilder,
@@ -74,16 +73,14 @@ export class FieldWizardComponent implements OnInit {
                 .subscribe(dto => {
                     this.field = dto;
 
-                    this.addFieldForm.submitCompleted({ type: fieldTypes[0].type });
+                    this.addFieldForm.submitCompleted({ newValue: { ...DEFAULT_FIELD } });
 
                     if (addNew) {
                         if (Types.isFunction(this.nameInput.nativeElement.focus)) {
                             this.nameInput.nativeElement.focus();
                         }
                     } else if (edit) {
-                        this.selectTab(0);
-
-                        this.isEditing = true;
+                        this.editing = true;
                     } else {
                         this.emitComplete();
                     }
@@ -93,22 +90,18 @@ export class FieldWizardComponent implements OnInit {
         }
     }
 
-    public selectTab(tab: number) {
-        this.selectedTab = tab;
-    }
-
     public save(addNew = false) {
         const value = this.editForm.submit();
 
         if (value) {
-            const properties = createProperties(this.field.properties['fieldType'], value);
+            const properties = createProperties(this.field.properties.fieldType, value);
 
-            this.schemasState.updateField(this.schema, this.field as RootFieldDto, new UpdateFieldDto(properties))
+            this.schemasState.updateField(this.schema, this.field as RootFieldDto, { properties })
                 .subscribe(() => {
                     this.editForm.submitCompleted();
 
                     if (addNew) {
-                        this.isEditing = false;
+                        this.editing = false;
                     } else {
                         this.emitComplete();
                     }

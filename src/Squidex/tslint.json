@@ -1,11 +1,11 @@
 {
+  "extends": ["tslint-immutable"],
   "rulesDirectory": [
     "node_modules/codelyzer",
     "node_modules/rxjs-tslint"
   ],
   "rules": {
     "angular-whitespace": false,
-    "banana-in-box": true,
     "class-name": true,
     "comment-format": [
       true,
@@ -43,8 +43,8 @@
     ],
     "no-access-missing-member": false,
     "no-arg": true,
-    "no-attribute-parameter-decorator": true,
     "no-bitwise": true,
+    "no-consecutive-blank-lines": true,
     "no-console": [
       true,
       "debug",
@@ -65,6 +65,7 @@
     ],
     "no-input-rename": false,
     "no-output-rename": false,
+    "no-pipe-impure": true,
     "no-shadowed-variable": true,
     "no-string-literal": false,
     "no-switch-case-fall-through": true,
@@ -97,13 +98,18 @@
       "single"
     ],
     "radix": true,
+    "readonly-array": [
+      true,
+      "ignore-local"
+    ],
     "rxjs-collapse-imports": true,
     "rxjs-proper-imports": true,
     "semicolon": [
       true,
       "always"
     ],
-    "templates-no-negated-async": true,
+    "template-no-negated-async": true,
+    "template-use-track-by-function": false,
     "trailing-comma": [
       true,
       {
@@ -125,12 +131,8 @@
         "variable-declaration": "nospace"
       }
     ],
-    "use-host-property-decorator": true,
-    "use-input-property-decorator": true,
     "use-life-cycle-interface": true,
-    "use-output-property-decorator": true,
     "use-pipe-transform-interface": true,
-    "use-view-encapsulation": true,
     "variable-name": false,
     "whitespace": [
       true,

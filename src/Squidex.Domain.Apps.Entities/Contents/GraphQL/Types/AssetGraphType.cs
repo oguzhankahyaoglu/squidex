@@ -13,11 +13,11 @@ using Squidex.Infrastructure;
 
 namespace Squidex.Domain.Apps.Entities.Contents.GraphQL.Types
 {
-    public sealed class AssetGraphType : ObjectGraphType<IAssetEntity>
+    public sealed class AssetGraphType : ObjectGraphType<IEnrichedAssetEntity>
     {
         public AssetGraphType(IGraphModel model)
         {
-            Name = "AssetDto";
+            Name = "Asset";
 
             AddField(new FieldType
             {
@@ -101,10 +101,10 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL.Types
 
             AddField(new FieldType
             {
-                Name = "slug",
+                Name = "fileHash",
                 ResolvedType = AllTypes.NonNullString,
-                Resolver = Resolve(x => x.Slug),
-                Description = "The file name as slug."
+                Resolver = Resolve(x => x.FileHash),
+                Description = "The hash of the file. Can be null for old files."
             });
 
             AddField(new FieldType
@@ -133,6 +133,14 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL.Types
 
             AddField(new FieldType
             {
+                Name = "slug",
+                ResolvedType = AllTypes.NonNullString,
+                Resolver = Resolve(x => x.Slug),
+                Description = "The file name as slug."
+            });
+
+            AddField(new FieldType
+            {
                 Name = "isImage",
                 ResolvedType = AllTypes.NonNullBoolean,
                 Resolver = Resolve(x => x.IsImage),
@@ -155,6 +163,15 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL.Types
                 Description = "The height of the image in pixels if the asset is an image."
             });
 
+            AddField(new FieldType
+            {
+                Name = "tags",
+                ResolvedType = null,
+                Resolver = Resolve(x => x.TagNames),
+                Description = "The asset tags.",
+                Type = AllTypes.NonNullTagsType
+            });
+
             if (model.CanGenerateAssetSourceUrl)
             {
                 AddField(new FieldType
@@ -169,9 +186,9 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL.Types
             Description = "An asset";
         }
 
-        private static IFieldResolver Resolve(Func<IAssetEntity, object> action)
+        private static IFieldResolver Resolve(Func<IEnrichedAssetEntity, object> action)
         {
-            return new FuncFieldResolver<IAssetEntity, object>(c => action(c.Source));
+            return new FuncFieldResolver<IEnrichedAssetEntity, object>(c => action(c.Source));
         }
     }
 }

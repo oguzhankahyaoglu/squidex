@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using Squidex.Domain.Apps.Core.Schemas;
-using Squidex.Infrastructure;
+using Squidex.Infrastructure.Validation;
 
 namespace Squidex.Domain.Apps.Entities.Schemas.Guards
 {
@@ -21,7 +21,23 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
 
         public static IEnumerable<ValidationError> Validate(FieldProperties properties)
         {
-            return properties?.Accept(Instance);
+            if (properties != null)
+            {
+                if (!properties.IsForApi() && properties.IsListField)
+                {
+                    yield return new ValidationError("UI field cannot be a list field.", nameof(properties.IsListField));
+                }
+
+                if (!properties.IsForApi() && properties.IsReferenceField)
+                {
+                    yield return new ValidationError("UI field cannot be a reference field.", nameof(properties.IsReferenceField));
+                }
+
+                foreach (var error in properties.Accept(Instance))
+                {
+                    yield return error;
+                }
+            }
         }
 
         public IEnumerable<ValidationError> Visit(ArrayFieldProperties properties)
@@ -180,9 +196,9 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
                     nameof(properties.MaxValue));
             }
 
-            if (properties.InlineEditable && properties.Editor != NumberFieldEditor.Input && properties.Editor != NumberFieldEditor.Dropdown)
+            if (properties.InlineEditable && properties.Editor == NumberFieldEditor.Radio)
             {
-                yield return new ValidationError("Inline editing is only allowed for dropdowns and input fields.",
+                yield return new ValidationError("Inline editing is not allowed for Radio editor.",
                     nameof(properties.InlineEditable),
                     nameof(properties.Editor));
             }
@@ -190,10 +206,23 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
 
         public IEnumerable<ValidationError> Visit(ReferencesFieldProperties properties)
         {
+            if (!properties.Editor.IsEnumValue())
+            {
+                yield return new ValidationError(Not.Valid("Editor"),
+                    nameof(properties.Editor));
+            }
+
             if (properties.MaxItems.HasValue && properties.MinItems.HasValue && properties.MinItems.Value > properties.MaxItems.Value)
             {
                 yield return new ValidationError(Not.GreaterEquals("Max items", "min items"),
                     nameof(properties.MinItems),
+                    nameof(properties.MaxItems));
+            }
+
+            if (properties.ResolveReference && properties.MaxItems != 1)
+            {
+                yield return new ValidationError("Can only resolve references when MaxItems is 1.",
+                    nameof(properties.ResolveReference),
                     nameof(properties.MaxItems));
             }
         }
@@ -260,6 +289,15 @@ namespace Squidex.Domain.Apps.Entities.Schemas.Guards
                 yield return new ValidationError(Not.GreaterEquals("Max items", "min items"),
                     nameof(properties.MinItems),
                     nameof(properties.MaxItems));
+            }
+        }
+
+        public IEnumerable<ValidationError> Visit(UIFieldProperties properties)
+        {
+            if (!properties.Editor.IsEnumValue())
+            {
+                yield return new ValidationError(Not.Valid("Editor"),
+                    nameof(properties.Editor));
             }
         }
     }

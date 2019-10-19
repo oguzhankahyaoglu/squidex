@@ -5,6 +5,8 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+// tslint:disable: readonly-array
+
 export module Types {
     export function hash(value: any): string {
         try {
@@ -71,7 +73,7 @@ export module Types {
             return false;
         }
 
-        for (let v of value) {
+        for (const v of value) {
             if (!validator(v)) {
                 return false;
             }
@@ -84,7 +86,7 @@ export module Types {
         return hash(lhs) === hash(rhs);
     }
 
-    export function isEquals<T>(lhs: T[], rhs: T[]) {
+    export function isEquals<T>(lhs: ReadonlyArray<T>, rhs: ReadonlyArray<T>) {
         if (!lhs && !rhs) {
             return true;
         }
@@ -101,4 +103,51 @@ export module Types {
 
         return true;
     }
+
+    export function isEmpty(value: any): boolean {
+        if (Types.isArray(value)) {
+            for (const v of value) {
+                if (!isEmpty(v)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (Types.isObject(value)) {
+            for (const key in value) {
+                if (value.hasOwnProperty(key)) {
+                    if (!isEmpty(value[key])) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        return Types.isUndefined(value) === true || Types.isNull(value) === true;
+    }
+}
+
+export function mergeInto(target: object, source: object) {
+    if (!Types.isObject(target) || !Types.isObject(source)) {
+        return source;
+    }
+
+    Object.keys(source).forEach(key => {
+        const targetValue = target[key];
+        const sourceValue = source[key];
+
+        if (Types.isArray(targetValue) && Types.isArray(sourceValue)) {
+            target[key] = targetValue.concat(sourceValue);
+        } else if (Types.isObject(targetValue) && Types.isObject(sourceValue)) {
+            target[key] = mergeInto({ ...targetValue }, sourceValue);
+        } else {
+            target[key] = sourceValue;
+        }
+    });
+
+    return target;
 }

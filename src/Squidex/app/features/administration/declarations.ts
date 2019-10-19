@@ -10,13 +10,11 @@ export * from './administration-area.component';
 export * from './guards/user-must-exist.guard';
 export * from './guards/unset-user.guard';
 
+export * from './pages/event-consumers/event-consumer.component';
 export * from './pages/event-consumers/event-consumers-page.component';
 export * from './pages/restore/restore-page.component';
+export * from './pages/users/user.component';
 export * from './pages/users/user-page.component';
 export * from './pages/users/users-page.component';
 
-export * from './services/event-consumers.service';
-export * from './services/users.service';
-
-export * from './state/event-consumers.state';
-export * from './state/users.state';
+export * from './internal';

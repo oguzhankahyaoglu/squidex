@@ -11,6 +11,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Squidex.Domain.Apps.Core.Apps.Json;
+using Squidex.Domain.Apps.Core.Contents.Json;
 using Squidex.Domain.Apps.Core.HandleRules;
 using Squidex.Domain.Apps.Core.Rules.Json;
 using Squidex.Domain.Apps.Core.Schemas;
@@ -19,6 +20,8 @@ using Squidex.Infrastructure;
 using Squidex.Infrastructure.Collections;
 using Squidex.Infrastructure.Json;
 using Squidex.Infrastructure.Json.Newtonsoft;
+using Squidex.Infrastructure.Queries.Json;
+using Squidex.Infrastructure.Reflection;
 using Xunit;
 
 namespace Squidex.Domain.Apps.Core
@@ -44,7 +47,9 @@ namespace Squidex.Domain.Apps.Core
                     new AppContributorsConverter(),
                     new AppPatternsConverter(),
                     new ClaimsPrincipalConverter(),
+                    new ContentFieldDataConverter(),
                     new EnvelopeHeadersConverter(),
+                    new FilterConverter(),
                     new InstantConverter(),
                     new JsonValueConverter(),
                     new LanguageConverter(),
@@ -52,11 +57,14 @@ namespace Squidex.Domain.Apps.Core
                     new NamedGuidIdConverter(),
                     new NamedLongIdConverter(),
                     new NamedStringIdConverter(),
+                    new PropertyPathConverter(),
                     new RefTokenConverter(),
                     new RolesConverter(),
                     new RuleConverter(),
                     new SchemaConverter(),
-                    new StringEnumConverter()),
+                    new StatusConverter(),
+                    new StringEnumConverter(),
+                    new WorkflowConverter()),
 
                 TypeNameHandling = typeNameHandling
             };
@@ -78,7 +86,8 @@ namespace Squidex.Domain.Apps.Core
                     .AddNumber(206, "nested-number")
                     .AddReferences(207, "nested-references")
                     .AddString(208, "nested-string")
-                    .AddTags(209, "nested-tags"))
+                    .AddTags(209, "nested-tags")
+                    .AddUI(210, "nested-ui"))
                 .AddAssets(102, "root-assets", Partitioning.Invariant,
                     new AssetsFieldProperties())
                 .AddBoolean(103, "root-boolean", Partitioning.Invariant,
@@ -101,6 +110,8 @@ namespace Squidex.Domain.Apps.Core
                     new StringFieldProperties { Hints = "My String1" })
                 .AddTags(112, "root-tags", Partitioning.Language,
                     new TagsFieldProperties())
+                .AddUI(113, "root-ui", Partitioning.Language,
+                    new UIFieldProperties())
                 .Update(new SchemaProperties { Hints = "The User" })
                 .HideField(104)
                 .HideField(211, 101)
@@ -116,11 +127,16 @@ namespace Squidex.Domain.Apps.Core
             return DefaultSerializer.Deserialize<T>(DefaultSerializer.Serialize(value));
         }
 
-        public static void TestFreeze(IFreezable freezable)
+        public static void TestFreeze(IFreezable sut)
         {
-            var sut = new AssetsFieldProperties();
+            var properties =
+                sut.GetType().GetRuntimeProperties()
+                    .Where(x =>
+                        x.CanWrite &&
+                        x.CanRead &&
+                        x.Name != "IsFrozen");
 
-            foreach (var property in sut.GetType().GetRuntimeProperties().Where(x => x.Name != "IsFrozen"))
+            foreach (var property in properties)
             {
                 var value =
                     property.PropertyType.IsValueType ?
@@ -136,7 +152,7 @@ namespace Squidex.Domain.Apps.Core
 
             sut.Freeze();
 
-            foreach (var property in sut.GetType().GetRuntimeProperties().Where(x => x.Name != "IsFrozen"))
+            foreach (var property in properties)
             {
                 var value =
                     property.PropertyType.IsValueType ?

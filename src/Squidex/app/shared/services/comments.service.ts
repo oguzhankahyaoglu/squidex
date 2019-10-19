@@ -18,18 +18,18 @@ import {
     Version
 } from '@app/framework';
 
-export class CommentsDto extends Model {
+export class CommentsDto extends Model<CommentsDto> {
     constructor(
-        public readonly createdComments: CommentDto[],
-        public readonly updatedComments: CommentDto[],
-        public readonly deletedComments: string[],
+        public readonly createdComments: ReadonlyArray<CommentDto>,
+        public readonly updatedComments: ReadonlyArray<CommentDto>,
+        public readonly deletedComments: ReadonlyArray<string>,
         public readonly version: Version
     ) {
         super();
     }
 }
 
-export class CommentDto extends Model {
+export class CommentDto extends Model<CommentDto> {
     constructor(
         public readonly id: string,
         public readonly time: DateTime,
@@ -38,17 +38,10 @@ export class CommentDto extends Model {
     ) {
         super();
     }
-
-    public with(value: Partial<CommentDto>): CommentDto {
-        return this.clone(value);
-    }
 }
 
-export class UpsertCommentDto {
-    constructor(
-        public readonly text: string
-    ) {
-    }
+export interface UpsertCommentDto {
+    readonly text: string;
 }
 
 @Injectable()
@@ -63,56 +56,58 @@ export class CommentsService {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/comments/${commentsId}?version=${version.value}`);
 
         return this.http.get<any>(url).pipe(
-                map(response => {
-                    return new CommentsDto(
-                        response.createdComments.map((item: any) => {
-                            return new CommentDto(
-                                item.id,
-                                DateTime.parseISO_UTC(item.time),
-                                item.text,
-                                item.user);
-                        }),
-                        response.updatedComments.map((item: any) => {
-                            return new CommentDto(
-                                item.id,
-                                DateTime.parseISO_UTC(item.time),
-                                item.text,
-                                item.user);
-                        }),
-                        response.deletedComments,
-                        new Version(response.version)
-                    );
-                }),
-                pretifyError('Failed to load comments.'));
+            map(body => {
+                const comments = new CommentsDto(
+                    body.createdComments.map((item: any) => {
+                        return new CommentDto(
+                            item.id,
+                            DateTime.parseISO_UTC(item.time),
+                            item.text,
+                            item.user);
+                    }),
+                    body.updatedComments.map((item: any) => {
+                        return new CommentDto(
+                            item.id,
+                            DateTime.parseISO_UTC(item.time),
+                            item.text,
+                            item.user);
+                    }),
+                    body.deletedComments,
+                    new Version(body.version)
+                );
+
+                return comments;
+            }),
+            pretifyError('Failed to load comments.'));
     }
 
     public postComment(appName: string, commentsId: string, dto: UpsertCommentDto): Observable<CommentDto> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/comments/${commentsId}`);
 
-        return this.http.post(url, dto).pipe(
-                map(response => {
-                    const body: any = response;
+        return this.http.post<any>(url, dto).pipe(
+            map(body => {
+                const comment = new CommentDto(
+                    body.id,
+                    DateTime.parseISO_UTC(body.time),
+                    body.text,
+                    body.user);
 
-                    return new CommentDto(
-                        body.id,
-                        DateTime.parseISO_UTC(body.time),
-                        body.text,
-                        body.user);
-                }),
-                pretifyError('Failed to create comment.'));
+                return comment;
+            }),
+            pretifyError('Failed to create comment.'));
     }
 
     public putComment(appName: string, commentsId: string, commentId: string, dto: UpsertCommentDto): Observable<any> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/comments/${commentsId}/${commentId}`);
 
         return this.http.put(url, dto).pipe(
-                pretifyError('Failed to update comment.'));
+            pretifyError('Failed to update comment.'));
     }
 
     public deleteComment(appName: string, commentsId: string, commentId: string): Observable<any> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/comments/${commentsId}/${commentId}`);
 
         return this.http.delete(url).pipe(
-                pretifyError('Failed to delete comment.'));
+            pretifyError('Failed to delete comment.'));
     }
 }

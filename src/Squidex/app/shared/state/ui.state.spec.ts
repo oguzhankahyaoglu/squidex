@@ -6,78 +6,115 @@
  */
 
 import { of } from 'rxjs';
-import { IMock, It, Mock, Times } from 'typemoq';
+import { IMock, Mock } from 'typemoq';
 
-import {  AppsState } from '@app/shared';
+import {
+    ResourceLinks,
+    ResourcesDto,
+    UIService,
+    UIState,
+    UsersService
+} from '@app/shared/internal';
 
-import { UIService } from './../services/ui.service';
-import { UIState } from './ui.state';
+import { TestValues } from './_test-helpers';
 
 describe('UIState', () => {
-    const app = 'my-app';
+    const {
+        app,
+        appsState
+    } = TestValues;
 
-    const appSettings = {
-        mapType: 'GM',
-        mapSize: 1024,
+    const common = {
+        key: 'xx',
+        map: {
+            type: 'GSM',
+            sizeX: 800,
+            sizeY: 600
+        },
         canCreateApps: true
     };
 
-    const commonSettings = {
-        mapType: 'OSM',
-        mapKey: 'Key',
+    const shared = {
+        map: {
+            type: 'GM', key: 'xyz'
+        },
         canCreateApps: true
     };
 
-    let appsState: IMock<AppsState>;
+    const user = {
+        map: {
+            sizeX: 1000
+        },
+        canCustomize: true
+    };
+
+    const resources: ResourceLinks = {
+        ['admin/events']: { method: 'GET', href: '/api/events' },
+        ['admin/restore']: { method: 'GET', href: '/api/restore' },
+        ['admin/users']: { method: 'GET', href: '/api/users' }
+    };
+
+    let usersService: IMock<UsersService>;
     let uiService: IMock<UIService>;
     let uiState: UIState;
 
     beforeEach(() => {
-        appsState = Mock.ofType<AppsState>();
-
-        appsState.setup(x => x.appName)
-            .returns(() => app);
-
-        appsState.setup(x => x.selectedApp)
-            .returns(() => of(<any>{ name: app }));
-
         uiService = Mock.ofType<UIService>();
 
-        uiService.setup(x => x.getSettings(app))
-            .returns(() => of(appSettings));
-
         uiService.setup(x => x.getCommonSettings())
-            .returns(() => of(commonSettings));
+            .returns(() => of(common));
 
-        uiService.setup(x => x.putSetting(app, It.isAnyString(), It.isAny()))
-            .returns(() => of({}));
+        uiService.setup(x => x.getSharedSettings(app))
+            .returns(() => of(shared));
 
-        uiService.setup(x => x.deleteSetting(app, It.isAnyString()))
-            .returns(() => of({}));
+        uiService.setup(x => x.getUserSettings(app))
+            .returns(() => of(user));
 
-        uiState = new UIState(appsState.object, uiService.object);
+        usersService = Mock.ofType<UsersService>();
+
+        usersService.setup(x => x.getResources())
+            .returns(() => of(new ResourcesDto(resources)));
+
+        uiState = new UIState(appsState.object, uiService.object, usersService.object);
     });
 
     it('should load settings', () => {
         expect(uiState.snapshot.settings).toEqual({
-            mapType: 'GM',
-            mapKey: 'Key',
-            mapSize: 1024,
-            canCreateApps: true
+            key: 'xx',
+            map: {
+                type: 'GM',
+                sizeX: 1000,
+                sizeY: 600,
+                key: 'xyz'
+            },
+            canCreateApps: true,
+            canCustomize: true
         });
+
+        expect(uiState.snapshot.canReadEvents).toBeTruthy();
+        expect(uiState.snapshot.canReadUsers).toBeTruthy();
+        expect(uiState.snapshot.canRestore).toBeTruthy();
     });
 
-    it('should add value to snapshot when set', () => {
+    it('should add value to snapshot when set as shared', () => {
+        uiService.setup(x => x.putSharedSetting(app, 'root.nested', 123))
+            .returns(() => of({})).verifiable();
+
         uiState.set('root.nested', 123);
 
         expect(uiState.snapshot.settings).toEqual({
-            mapType: 'GM',
-            mapKey: 'Key',
-            mapSize: 1024,
+            key: 'xx',
+            map: {
+                type: 'GM',
+                sizeX: 1000,
+                sizeY: 600,
+                key: 'xyz'
+            },
+            canCreateApps: true,
+            canCustomize: true,
             root: {
                 nested: 123
-            },
-            canCreateApps: true
+            }
         });
 
         uiState.get('root', {}).subscribe(x => {
@@ -92,36 +129,83 @@ describe('UIState', () => {
             expect(x).toEqual(1337);
         });
 
-        uiService.verify(x => x.putSetting(app, 'root.nested', 123), Times.once());
+        uiService.verifyAll();
     });
 
-    it('should remove value from snapshot when removed', () => {
-        uiState.set('root.nested1', 123);
-        uiState.set('root.nested2', 123);
-        uiState.remove('root.nested1');
+    it('should add value to snapshot when set as user', () => {
+        uiService.setup(x => x.putUserSetting(app, 'root.nested', 123))
+            .returns(() => of({})).verifiable();
+
+        uiState.set('root.nested', 123, true);
 
         expect(uiState.snapshot.settings).toEqual({
-            mapType: 'GM',
-            mapKey: 'Key',
-            mapSize: 1024,
-            root: {
-                nested2: 123
+            key: 'xx',
+            map: {
+                type: 'GM',
+                sizeX: 1000,
+                sizeY: 600,
+                key: 'xyz'
             },
-            canCreateApps: true
+            canCreateApps: true,
+            canCustomize: true,
+            root: {
+                nested: 123
+            }
         });
 
         uiState.get('root', {}).subscribe(x => {
-            expect(x).toEqual({ nested2: 123 });
+            expect(x).toEqual({ nested: 123 });
         });
 
-        uiState.get('root.nested2', 0).subscribe(x => {
+        uiState.get('root.nested', 0).subscribe(x => {
             expect(x).toEqual(123);
         });
 
-        uiState.get('root.nested1', 1337).subscribe(x => {
+        uiState.get('root.notfound', 1337).subscribe(x => {
             expect(x).toEqual(1337);
         });
 
-        uiService.verify(x => x.deleteSetting(app, 'root.nested1'), Times.once());
+        uiService.verifyAll();
+    });
+
+    it('should remove value from snapshot and shared settings when removed', () => {
+        uiService.setup(x => x.deleteSharedSetting(app, 'map.key'))
+            .returns(() => of({})).verifiable();
+
+        uiState.remove('map.key');
+
+        expect(uiState.snapshot.settings).toEqual({
+            key: 'xx',
+            map: {
+                type: 'GM',
+                sizeX: 1000,
+                sizeY: 600
+            },
+            canCreateApps: true,
+            canCustomize: true
+        });
+
+        uiService.verifyAll();
+    });
+
+    it('should remove value from snapshot and user settings when removed', () => {
+        uiService.setup(x => x.deleteUserSetting(app, 'map.sizeX'))
+            .returns(() => of({})).verifiable();
+
+        uiState.remove('map.sizeX');
+
+        expect(uiState.snapshot.settings).toEqual({
+            key: 'xx',
+            map: {
+                type: 'GM',
+                sizeX: 800,
+                sizeY: 600,
+                key: 'xyz'
+            },
+            canCreateApps: true,
+            canCustomize: true
+        });
+
+        uiService.verifyAll();
     });
 });

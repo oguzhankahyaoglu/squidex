@@ -9,126 +9,162 @@ import { of } from 'rxjs';
 import { IMock, It, Mock, Times } from 'typemoq';
 
 import {
-    AppContributorDto,
-    AppContributorsDto,
-    AppContributorsService,
-    AppsState,
-    AssignContributorDto,
-    AuthService,
+    ContributorDto,
+    ContributorsPayload,
+    ContributorsService,
     ContributorsState,
     DialogService,
-    Version,
-    Versioned
-} from '@app/shared';
-import { ContributorAssignedDto } from '../services/app-contributors.service';
+    versioned
+} from '@app/shared/internal';
+
+import { createContributors } from '../services/contributors.service.spec';
+
+import { TestValues } from './_test-helpers';
 
 describe('ContributorsState', () => {
-    const app = 'my-app';
-    const version = new Version('1');
-    const newVersion = new Version('2');
+    const {
+        app,
+        appsState,
+        newVersion,
+        version
+    } = TestValues;
 
-    const oldContributors = [
-        new AppContributorDto('id1', 'Developer'),
-        new AppContributorDto('id2', 'Developer')
-    ];
+    let allIds: number[] = [];
+
+    for (let i = 1; i <= 20; i++) {
+        allIds.push(i);
+    }
+
+    const oldContributors = createContributors(...allIds);
 
     let dialogs: IMock<DialogService>;
-    let appsState: IMock<AppsState>;
-    let authService: IMock<AuthService>;
-    let contributorsService: IMock<AppContributorsService>;
+    let contributorsService: IMock<ContributorsService>;
     let contributorsState: ContributorsState;
 
     beforeEach(() => {
         dialogs = Mock.ofType<DialogService>();
 
-        authService = Mock.ofType<AuthService>();
-
-        authService.setup(x => x.user)
-            .returns(() => <any>{ id: 'id2' });
-
-        appsState = Mock.ofType<AppsState>();
-
-        appsState.setup(x => x.appName)
-            .returns(() => app);
-
-        contributorsService = Mock.ofType<AppContributorsService>();
+        contributorsService = Mock.ofType<ContributorsService>();
+        contributorsState = new ContributorsState(contributorsService.object, appsState.object, dialogs.object);
 
         contributorsService.setup(x => x.getContributors(app))
-            .returns(() => of(new AppContributorsDto(oldContributors, 3, version)));
-
-        contributorsState = new ContributorsState(contributorsService.object, appsState.object, authService.object, dialogs.object);
-        contributorsState.load().subscribe();
+            .returns(() => of(versioned(version, oldContributors))).verifiable();
     });
 
-    it('should load contributors', () => {
-        expect(contributorsState.snapshot.contributors.values).toEqual([
-            { isCurrentUser: false, contributor: oldContributors[0] },
-            { isCurrentUser: true,  contributor: oldContributors[1] }
-        ]);
-        expect(contributorsState.snapshot.isMaxReached).toBeFalsy();
-        expect(contributorsState.snapshot.isLoaded).toBeTruthy();
-        expect(contributorsState.snapshot.maxContributors).toBe(3);
-        expect(contributorsState.snapshot.version).toEqual(version);
-
-        dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.never());
+    afterEach(() => {
+        contributorsService.verifyAll();
     });
 
-    it('should show notification on load when reload is true', () => {
-        contributorsState.load(true).subscribe();
+    describe('Loading', () => {
+        it('should load contributors', () => {
+            contributorsState.load().subscribe();
 
-        expect().nothing();
+            expect(contributorsState.snapshot.contributors).toEqual(oldContributors.items);
+            expect(contributorsState.snapshot.isLoaded).toBeTruthy();
+            expect(contributorsState.snapshot.maxContributors).toBe(oldContributors.maxContributors);
+            expect(contributorsState.snapshot.version).toEqual(version);
 
-        dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.once());
+            dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.never());
+        });
+
+        it('should only current page of contributors', () => {
+            contributorsState.load().subscribe();
+
+            let contributors: ReadonlyArray<ContributorDto>;
+
+            contributorsState.contributorsPaged.subscribe(result => {
+                contributors = result;
+            });
+
+            expect(contributors!).toEqual(oldContributors.items.slice(0, 10));
+            expect(contributorsState.snapshot.page).toEqual(0);
+        });
+
+        it('should show next of contributors when going next', () => {
+            contributorsState.load().subscribe();
+            contributorsState.goNext();
+
+            let contributors: ReadonlyArray<ContributorDto>;
+
+            contributorsState.contributorsPaged.subscribe(result => {
+                contributors = result;
+            });
+
+            expect(contributors!).toEqual(oldContributors.items.slice(10, 20));
+            expect(contributorsState.snapshot.page).toEqual(1);
+        });
+
+        it('should show next of contributors when going prev', () => {
+            contributorsState.load().subscribe();
+            contributorsState.goNext();
+            contributorsState.goPrev();
+
+            let contributors: ReadonlyArray<ContributorDto>;
+
+            contributorsState.contributorsPaged.subscribe(result => {
+                contributors = result;
+            });
+
+            expect(contributors!).toEqual(oldContributors.items.slice(0, 10));
+            expect(contributorsState.snapshot.page).toEqual(0);
+        });
+
+        it('should show filtered contributors when searching', () => {
+            contributorsState.load().subscribe();
+            contributorsState.search('4');
+
+            let contributors: ReadonlyArray<ContributorDto>;
+
+            contributorsState.contributorsPaged.subscribe(result => {
+                contributors = result;
+            });
+
+            expect(contributors!).toEqual(createContributors(4, 14).items);
+            expect(contributorsState.snapshot.page).toEqual(0);
+        });
+
+        it('should show notification on load when reload is true', () => {
+            contributorsState.load(true).subscribe();
+
+            expect().nothing();
+
+            dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.once());
+        });
     });
 
-    it('should add contributor to snapshot when assigned', () => {
-        const newContributor = new AppContributorDto('id3', 'Developer');
+    describe('Updates', () => {
+        beforeEach(() => {
+            contributorsState.load().subscribe();
+        });
 
-        const request = new AssignContributorDto('mail2stehle@gmail.com', 'Developer');
+        it('should update contributors when user assigned', () => {
+            const updated = createContributors(5, 6);
 
-        contributorsService.setup(x => x.postContributor(app, request, version))
-            .returns(() => of(new Versioned<ContributorAssignedDto>(newVersion, new ContributorAssignedDto('id3', true))));
+            const request = { contributorId: 'mail2stehle@gmail.com', role: 'Developer' };
 
-        contributorsState.assign(request).subscribe();
+            contributorsService.setup(x => x.postContributor(app, request, version))
+                .returns(() => of(versioned(newVersion, updated))).verifiable();
 
-        expect(contributorsState.snapshot.contributors.values).toEqual([
-            { isCurrentUser: false, contributor: oldContributors[0] },
-            { isCurrentUser: true,  contributor: oldContributors[1] },
-            { isCurrentUser: false,  contributor: newContributor }
-        ]);
-        expect(contributorsState.snapshot.isMaxReached).toBeTruthy();
-        expect(contributorsState.snapshot.maxContributors).toBe(3);
-        expect(contributorsState.snapshot.version).toEqual(newVersion);
-    });
+            contributorsState.assign(request).subscribe();
 
-    it('should update contributor in snapshot when assigned and already added', () => {
-        const newContributor = new AppContributorDto('id2', 'Owner');
+            expectNewContributors(updated);
+        });
 
-        const request = new AssignContributorDto('mail2stehle@gmail.com', 'Owner');
+        it('should update contributors when contribution revoked', () => {
+            const updated = createContributors(5, 6);
 
-        contributorsService.setup(x => x.postContributor(app, request, version))
-            .returns(() => of(new Versioned<ContributorAssignedDto>(newVersion, new ContributorAssignedDto('id2', true))));
+            contributorsService.setup(x => x.deleteContributor(app, oldContributors.items[0], version))
+                .returns(() => of(versioned(newVersion, updated))).verifiable();
 
-        contributorsState.assign(request).subscribe();
+            contributorsState.revoke(oldContributors.items[0]).subscribe();
 
-        expect(contributorsState.snapshot.contributors.values).toEqual([
-            { isCurrentUser: false, contributor: oldContributors[0] },
-            { isCurrentUser: true,  contributor: newContributor }
-        ]);
-        expect(contributorsState.snapshot.isMaxReached).toBeFalsy();
-        expect(contributorsState.snapshot.maxContributors).toBe(3);
-        expect(contributorsState.snapshot.version).toEqual(newVersion);
-    });
+            expectNewContributors(updated);
+        });
 
-    it('should remove contributor from snapshot when revoked', () => {
-        contributorsService.setup(x => x.deleteContributor(app, oldContributors[0].contributorId, version))
-            .returns(() => of(new Versioned<any>(newVersion, {})));
-
-        contributorsState.revoke(oldContributors[0]).subscribe();
-
-        expect(contributorsState.snapshot.contributors.values).toEqual([
-            { isCurrentUser: true, contributor: oldContributors[1] }
-        ]);
-        expect(contributorsState.snapshot.version).toEqual(newVersion);
+        function expectNewContributors(updated: ContributorsPayload) {
+            expect(contributorsState.snapshot.contributors).toEqual(updated.items);
+            expect(contributorsState.snapshot.maxContributors).toBe(updated.maxContributors);
+            expect(contributorsState.snapshot.version).toEqual(newVersion);
+        }
     });
 });

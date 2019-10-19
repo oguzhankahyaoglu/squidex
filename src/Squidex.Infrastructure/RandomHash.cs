@@ -15,15 +15,29 @@ namespace Squidex.Infrastructure
     {
         public static string New()
         {
-            return Guid.NewGuid().ToString().Sha256Base64().Replace("+", "x");
+            return Guid.NewGuid()
+                .ToString().Sha256Base64()
+                .ToLowerInvariant()
+                .Replace("+", "x")
+                .Replace("=", "x")
+                .Replace("/", "x");
+        }
+
+        public static string Simple()
+        {
+            return Guid.NewGuid().ToString().Replace("-", string.Empty);
         }
 
         public static string Sha256Base64(this string value)
         {
+            return Sha256Base64(Encoding.UTF8.GetBytes(value));
+        }
+
+        public static string Sha256Base64(this byte[] bytes)
+        {
             using (var sha = SHA256.Create())
             {
-                var bytesValue = Encoding.UTF8.GetBytes(value);
-                var bytesHash = sha.ComputeHash(bytesValue);
+                var bytesHash = sha.ComputeHash(bytes);
 
                 var result = Convert.ToBase64String(bytesHash);
 

@@ -14,17 +14,17 @@
 
         <ng-container content>
             <div class="form-group">
-                <div *ngFor="let script of editForm.form.controls | sqxKeys">
+                <ng-container *ngFor="let script of editForm.form.controls | sqxKeys">
                     <ng-container *ngIf="selectedField === script">
-                        <sqx-code-editor name="script" [formControlName]="script"></sqx-code-editor>
+                        <sqx-code-editor [noBorder]="true" [formControlName]="script"></sqx-code-editor>
                     </ng-container>
-                </div>
+                </ng-container>
             </div>
         </ng-container>
 
         <ng-container footer>
             <button type="reset" class="float-left btn btn-secondary" (click)="emitComplete()" [disabled]="editForm.submitted | async">Cancel</button>
-            <button type="submit" class="float-right btn btn-primary">Save</button>
+            <button type="submit" class="float-right btn btn-primary" *ngIf="isEditable">Save</button>
         </ng-container>
     </sqx-modal-dialog>
 </form>

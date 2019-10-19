@@ -23,12 +23,12 @@ export class MessageBus {
     private message$ = new Subject<Message>();
 
     public emit<T>(message: T): void {
-        const channel = (<any>message.constructor).name;
+        const channel = ((<any>message)['constructor']).name;
 
         this.message$.next({ channel: channel, data: message });
     }
 
-    public of<T>(messageType: { new(...args: any[]): T }): Observable<T> {
+    public of<T>(messageType: { new(...args: ReadonlyArray<any>): T }): Observable<T> {
         const channel = (<any>messageType).name;
 
         return this.message$.pipe(filter(m => m.channel === channel), map(m => m.data));

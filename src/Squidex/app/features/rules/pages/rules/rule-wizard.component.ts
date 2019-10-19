@@ -5,39 +5,34 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 
 import {
-    CreateRuleDto,
     Form,
-    ImmutableArray,
     RuleDto,
     RuleElementDto,
     RulesState,
     SchemaDto
 } from '@app/shared';
 
-export const MODE_WIZARD = 'Wizard';
-export const MODE_EDIT_TRIGGER = 'EditTrigger';
-export const MODE_EDIT_ACTION  = 'EditAction';
+const MODE_WIZARD = 'Wizard';
+const MODE_EDIT_TRIGGER = 'EditTrigger';
+const MODE_EDIT_ACTION  = 'EditAction';
+
+const TITLES: ReadonlyArray<string> = [
+    'Step 1 of 4: Select Trigger',
+    'Step 2 of 4: Configure Trigger',
+    'Step 3 of 4: Select Action',
+    'Step 4 of 4: Configure Action'
+];
 
 @Component({
     selector: 'sqx-rule-wizard',
     styleUrls: ['./rule-wizard.component.scss'],
     templateUrl: './rule-wizard.component.html'
 })
-export class RuleWizardComponent implements OnInit {
-    public actionForm = new Form<FormGroup>(new FormGroup({}));
-    public actionType: string;
-    public action: any = {};
-
-    public triggerForm = new Form<FormGroup>(new FormGroup({}));
-    public triggerType: string;
-    public trigger: any = {};
-
-    public step = 1;
-
+export class RuleWizardComponent implements AfterViewInit, OnInit {
     @Output()
     public complete = new EventEmitter();
 
@@ -48,7 +43,7 @@ export class RuleWizardComponent implements OnInit {
     public ruleTriggers: { [name: string]: RuleElementDto };
 
     @Input()
-    public schemas: ImmutableArray<SchemaDto>;
+    public schemas: ReadonlyArray<SchemaDto>;
 
     @Input()
     public rule: RuleDto;
@@ -56,12 +51,36 @@ export class RuleWizardComponent implements OnInit {
     @Input()
     public mode = MODE_WIZARD;
 
+    public actionForm = new Form<FormGroup, any>(new FormGroup({}));
+    public actionType: string;
+    public action: any = {};
+
+    public triggerForm = new Form<FormGroup, any>(new FormGroup({}));
+    public triggerType: string;
+    public trigger: any = {};
+
+    public titles = TITLES;
+
+    public get actionElement() {
+        return this.ruleActions[this.actionType];
+    }
+
+    public get triggerElement() {
+        return this.ruleTriggers[this.triggerType];
+    }
+
+    public isEditable: boolean;
+
+    public step = 1;
+
     constructor(
         private readonly rulesState: RulesState
     ) {
     }
 
     public ngOnInit() {
+        this.isEditable = !this.rule || this.rule.canUpdate;
+
         if (this.mode === MODE_EDIT_ACTION) {
             this.step = 4;
 
@@ -73,6 +92,12 @@ export class RuleWizardComponent implements OnInit {
             this.trigger = this.rule.trigger;
             this.triggerType = this.rule.triggerType;
         }
+    }
+
+    public ngAfterViewInit() {
+        this.actionForm.setEnabled(this.isEditable);
+
+        this.triggerForm.setEnabled(this.isEditable);
     }
 
     public emitComplete() {
@@ -118,7 +143,7 @@ export class RuleWizardComponent implements OnInit {
     }
 
     private createRule() {
-        const requestDto = new CreateRuleDto(this.trigger, this.action);
+        const requestDto = { trigger: this.trigger, action: this.action };
 
         this.rulesState.create(requestDto)
             .subscribe(() => {
@@ -133,6 +158,10 @@ export class RuleWizardComponent implements OnInit {
     }
 
     private updateTrigger() {
+        if (!this.isEditable) {
+            return;
+        }
+
         this.rulesState.updateTrigger(this.rule, this.trigger)
             .subscribe(() => {
                 this.emitComplete();
@@ -144,6 +173,10 @@ export class RuleWizardComponent implements OnInit {
     }
 
     private updateAction() {
+        if (!this.isEditable) {
+            return;
+        }
+
         this.rulesState.updateAction(this.rule, this.action)
             .subscribe(() => {
                 this.emitComplete();

@@ -21,7 +21,7 @@ using Squidex.Infrastructure.States;
 
 namespace Squidex.Domain.Apps.Entities.Comments
 {
-    public sealed class CommentsGrain : DomainObjectGrainBase<CommentsState>, ICommentGrain
+    public sealed class CommentsGrain : DomainObjectGrainBase<CommentsState>, ICommentsGrain
     {
         private readonly IStore<Guid> store;
         private readonly List<Envelope<CommentsEvent>> events = new List<Envelope<CommentsEvent>>();
@@ -73,7 +73,7 @@ namespace Squidex.Domain.Apps.Entities.Comments
             switch (command)
             {
                 case CreateComment createComment:
-                    return UpsertAsync(createComment, c =>
+                    return UpsertReturn(createComment, c =>
                     {
                         GuardComments.CanCreate(c);
 
@@ -83,7 +83,7 @@ namespace Squidex.Domain.Apps.Entities.Comments
                     });
 
                 case UpdateComment updateComment:
-                    return UpsertAsync(updateComment, c =>
+                    return Upsert(updateComment, c =>
                     {
                         GuardComments.CanUpdate(events, c);
 
@@ -91,7 +91,7 @@ namespace Squidex.Domain.Apps.Entities.Comments
                     });
 
                 case DeleteComment deleteComment:
-                    return UpsertAsync(deleteComment, c =>
+                    return Upsert(deleteComment, c =>
                     {
                         GuardComments.CanDelete(events, c);
 

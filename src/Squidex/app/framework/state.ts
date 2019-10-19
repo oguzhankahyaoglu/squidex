@@ -6,13 +6,16 @@
  */
 
 import { AbstractControl } from '@angular/forms';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
+import { distinctUntilChanged, map, shareReplay } from 'rxjs/operators';
 
-import { ErrorDto } from './utils/error';
+import { ErrorDto, getDisplayMessage } from './utils/error';
+
+import { ResourceLinks } from './utils/hateos';
+
 import { Types } from './utils/types';
 
-import { fullValue} from './angular/forms/forms-helper';
+import { getRawValue } from './angular/forms/forms-helper';
 
 export interface FormState {
     submitted: boolean;
@@ -20,49 +23,67 @@ export interface FormState {
     error?: string | null;
 }
 
-export class Form<T extends AbstractControl> {
+export class Form<T extends AbstractControl, V> {
     private readonly state = new State<FormState>({ submitted: false });
 
     public submitted =
-        this.state.changes.pipe(map(s => s.submitted));
+        this.state.project(s => s.submitted);
 
     public error =
-        this.state.changes.pipe(map(s => s.error));
+        this.state.project(s => s.error);
 
     constructor(
         public readonly form: T
     ) {
     }
 
-    protected disable() {
-        this.form.disable();
+    public setEnabled(isEnabled: boolean) {
+        if (isEnabled) {
+            this.enable();
+        } else {
+            this.disable();
+        }
     }
 
     protected enable() {
         this.form.enable();
     }
 
-    protected reset(value: any) {
-        this.form.reset(value);
+    protected disable() {
+        this.form.disable();
     }
 
-    protected setValue(value: any) {
-        this.form.reset(value, { emitEvent: true });
+    protected setValue(value?: V) {
+        if (value) {
+            this.form.reset(this.transformLoad(value));
+        } else {
+            this.form.reset();
+        }
     }
 
-    public load(value: any) {
-        this.state.next(_ => ({ submitted: false, error: null }));
+    protected transformLoad(value: V): any {
+        return value;
+    }
+
+    protected transformSubmit(value: any): V {
+        return value;
+    }
+
+    public load(value: V | undefined) {
+        this.state.next({ submitted: false, error: null });
 
         this.setValue(value);
     }
 
-    public submit(): any | null {
-        this.state.next(_ => ({ submitted: true }));
+    public submit(): V | null {
+        this.state.next({ submitted: true, error: null });
 
         if (this.form.valid) {
-            const value = fullValue(this.form);
+            const value = this.transformSubmit(getRawValue(this.form));
 
-            this.disable();
+            if (value) {
+                this.disable();
+            }
 
             return value;
         } else {
@@ -70,36 +91,33 @@ export class Form<T extends AbstractControl> {
         }
     }
 
-    public submitCompleted(newValue?: any) {
-        this.state.next(_ => ({ submitted: false, error: null }));
+    public submitCompleted(options?: { newValue?: V, noReset?: boolean }) {
+        this.state.next({ submitted: false, error: null });
 
         this.enable();
 
-        if (newValue) {
-            this.reset(newValue);
-        } else {
+        if (options && options.noReset) {
             this.form.markAsPristine();
+        } else {
+            this.setValue(options ? options.newValue : undefined);
         }
     }
 
     public submitFailed(error?: string | ErrorDto) {
-        this.state.next(_ => ({ submitted: false, error: this.getError(error) }));
+        this.state.next({ submitted: false, error: getDisplayMessage(error) });
 
         this.enable();
     }
-
-    private getError(error?: string | ErrorDto) {
-        if (Types.is(error, ErrorDto)) {
-            return error.displayMessage;
-        } else {
-            return error;
-        }
-    }
 }
 
-export class Model {
-    protected clone(update: ((v: any) => object) | object, validOnly = false): any {
-        let values: object;
+export class Model<T> {
+    public with(value: Partial<T>, validOnly = false): T {
+        return this.clone(value, validOnly);
+    }
+
+    protected clone<V>(update: ((v: any) => V) | Partial<V>, validOnly = false): V {
+        let values: Partial<V>;
+
         if (Types.isFunction(update)) {
             values = update(<any>this);
         } else {
@@ -108,7 +126,7 @@ export class Model {
 
         const clone = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
 
-        for (let key in values) {
+        for (const key in values) {
             if (values.hasOwnProperty(key)) {
                 let value = values[key];
 
@@ -126,29 +144,60 @@ export class Model {
     }
 }
 
-export class State<T extends {}> {
-    private readonly state: BehaviorSubject<T>;
-    private readonly initialState: T;
+export class ResultSet<T> {
+    public readonly _links: ResourceLinks;
 
-    public get changes(): Observable<T> {
+    constructor(
+        public readonly total: number,
+        public readonly items: ReadonlyArray<T>,
+        links?: ResourceLinks
+    ) {
+        this._links = links || {};
+    }
+}
+
+export class State<T extends {}> {
+    private readonly state: BehaviorSubject<Readonly<T>>;
+    private readonly initialState: Readonly<T>;
+
+    public get changes(): Observable<Readonly<T>> {
         return this.state;
     }
 
-    public get snapshot() {
+    public get snapshot(): Readonly<T> {
         return this.state.value;
     }
 
-    constructor(state: T) {
+    public project<M>(project: (value: T) => M, compare?: (x: M, y: M) => boolean) {
+        return this.changes.pipe(
+            map(x => project(x)), distinctUntilChanged(compare), shareReplay(1));
+    }
+
+    public projectFrom<M, N>(source: Observable<M>, project: (value: M) => N, compare?: (x: N, y: N) => boolean) {
+        return source.pipe(
+            map(x => project(x)), distinctUntilChanged(compare), shareReplay(1));
+    }
+
+    public projectFrom2<M, N, O>(lhs: Observable<M>, rhs: Observable<N>, project: (l: M, r: N) => O, compare?: (x: O, y: O) => boolean) {
+        return combineLatest(lhs, rhs, (x, y) => project(x, y)).pipe(
+            distinctUntilChanged(compare), shareReplay(1));
+    }
+
+    constructor(state: Readonly<T>) {
         this.initialState = state;
 
         this.state = new BehaviorSubject(state);
     }
 
-    public resetState() {
-        this.next(this.initialState);
+    public resetState(update?: ((v: T) => Readonly<T>) | object) {
+        this.state.next(this.initialState);
+
+        if (update) {
+            this.next(update);
+        }
     }
 
-    public next(update: ((v: T) => T) | object) {
+    public next(update: ((v: T) => Readonly<T>) | object) {
         if (Types.isFunction(update)) {
             this.state.next(update(this.state.value));
         } else {

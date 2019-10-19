@@ -6,11 +6,9 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
     ALL_TRIGGERS,
-    AppsState,
     DialogModel,
     RuleDto,
     RuleElementDto,
@@ -34,7 +32,6 @@ export class RulesPageComponent implements OnInit {
     public ruleTriggers = ALL_TRIGGERS;
 
     constructor(
-        public readonly appsState: AppsState,
         public readonly rulesState: RulesState,
         public readonly rulesService: RulesService,
         public readonly schemasState: SchemasState
@@ -42,29 +39,29 @@ export class RulesPageComponent implements OnInit {
     }
 
     public ngOnInit() {
-        this.rulesState.load().pipe(onErrorResumeNext()).subscribe();
+        this.rulesState.load();
 
         this.rulesService.getActions()
             .subscribe(actions => {
                 this.ruleActions = actions;
             });
 
-        this.schemasState.load().pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.load();
     }
 
     public reload() {
-        this.rulesState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.rulesState.load(true);
     }
 
     public delete(rule: RuleDto) {
-        this.rulesState.delete(rule).pipe(onErrorResumeNext()).subscribe();
+        this.rulesState.delete(rule);
     }
 
     public toggle(rule: RuleDto) {
         if (rule.isEnabled) {
-            this.rulesState.disable(rule).pipe(onErrorResumeNext()).subscribe();
+            this.rulesState.disable(rule);
         } else {
-            this.rulesState.enable(rule).pipe(onErrorResumeNext()).subscribe();
+            this.rulesState.enable(rule);
         }
     }
 

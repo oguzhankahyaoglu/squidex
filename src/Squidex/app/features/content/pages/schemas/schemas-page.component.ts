@@ -7,9 +7,8 @@
 
 import { Component, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
-import { AppsState, SchemasState } from '@app/shared';
+import { SchemaCategory, SchemasState } from '@app/shared';
 
 @Component({
     selector: 'sqx-schemas-page',
@@ -20,17 +19,15 @@ export class SchemasPageComponent implements OnInit {
     public schemasFilter = new FormControl();
 
     constructor(
-        public readonly appsState: AppsState,
         public readonly schemasState: SchemasState
     ) {
     }
 
     public ngOnInit() {
-        this.schemasState.load().pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.load();
     }
 
-    public trackByCategory(index: number, category: string) {
-        return category;
+    public trackByCategory(index: number, category: SchemaCategory) {
+        return category.name;
     }
 }
-

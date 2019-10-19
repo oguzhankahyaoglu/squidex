@@ -7,8 +7,9 @@
 
 using System;
 using Squidex.Domain.Apps.Events.Assets;
-using Squidex.Infrastructure;
 using Squidex.Infrastructure.EventSourcing;
+using Squidex.Infrastructure.Migrations;
+using Squidex.Infrastructure.Reflection;
 
 namespace Migrate_01.OldEvents
 {
@@ -20,7 +21,7 @@ namespace Migrate_01.OldEvents
 
         public IEvent Migrate()
         {
-            return new AssetAnnotated { FileName = FileName };
+            return SimpleMapper.Map(this, new AssetAnnotated());
         }
     }
 }

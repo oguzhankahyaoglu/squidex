@@ -14,6 +14,7 @@ using Squidex.Domain.Apps.Core.Schemas;
 using Squidex.Domain.Apps.Core.ValidateContent.Validators;
 using Squidex.Infrastructure;
 using Squidex.Infrastructure.Json.Objects;
+using Squidex.Infrastructure.Validation;
 
 #pragma warning disable SA1028, IDE0004 // Code must not contain trailing whitespace
 
@@ -21,7 +22,6 @@ namespace Squidex.Domain.Apps.Core.ValidateContent
 {
     public sealed class ContentValidator
     {
-        private static readonly ContentFieldData DefaultFieldData = new ContentFieldData();
         private readonly Schema schema;
         private readonly PartitionResolver partitionResolver;
         private readonly ValidationContext context;
@@ -35,6 +35,7 @@ namespace Squidex.Domain.Apps.Core.ValidateContent
         public ContentValidator(Schema schema, PartitionResolver partitionResolver, ValidationContext context)
         {
             Guard.NotNull(schema, nameof(schema));
+            Guard.NotNull(context, nameof(context));
             Guard.NotNull(partitionResolver, nameof(partitionResolver));
 
             this.schema = schema;
@@ -46,7 +47,7 @@ namespace Squidex.Domain.Apps.Core.ValidateContent
         {
             var pathString = path.ToPathString();
 
-            errors.Add(new ValidationError($"{pathString}: {message}", pathString));
+            errors.Add(new ValidationError(message, pathString));
         }
 
         public Task ValidatePartialAsync(NamedContentData data)
@@ -71,19 +72,19 @@ namespace Squidex.Domain.Apps.Core.ValidateContent
         {
             var fieldsValidators = new Dictionary<string, (bool IsOptional, IValidator Validator)>(schema.Fields.Count);
 
-            foreach (var field in schema.FieldsByName)
+            foreach (var field in schema.Fields)
             {
-                fieldsValidators[field.Key] = (!field.Value.RawProperties.IsRequired, CreateFieldValidator(field.Value, isPartial));
+                fieldsValidators[field.Name] = (!field.RawProperties.IsRequired, CreateFieldValidator(field, isPartial));
             }
 
-            return new ObjectValidator<ContentFieldData>(fieldsValidators, isPartial, "field", DefaultFieldData);
+            return new ObjectValidator<ContentFieldData>(fieldsValidators, isPartial, "field");
         }
 
         private IValidator CreateFieldValidator(IRootField field, bool isPartial)
         {
             var partitioning = partitionResolver(field.Partitioning);
 
-            var fieldValidator = new FieldValidator(ValidatorsFactory.CreateValidators(field).ToArray(), field);
+            var fieldValidator = field.CreateValidator();
             var fieldsValidators = new Dictionary<string, (bool IsOptional, IValidator Validator)>();
 
             foreach (var partition in partitioning)
@@ -91,11 +92,17 @@ namespace Squidex.Domain.Apps.Core.ValidateContent
                 fieldsValidators[partition.Key] = (partition.IsOptional, fieldValidator);
             }
 
+            return new AggregateValidator(
+                field.CreateBagValidator()
+                    .Union(Enumerable.Repeat(
+                        new ObjectValidator<IJsonValue>(fieldsValidators, isPartial, TypeName(field)), 1)));
+        }
+
+        private static string TypeName(IRootField field)
+        {
             var isLanguage = field.Partitioning.Equals(Partitioning.Language);
 
-            var type = isLanguage ? "language" : "invariant value";
-
-            return new ObjectValidator<IJsonValue>(fieldsValidators, isPartial, type, JsonValue.Null);
+            return isLanguage ? "language" : "invariant value";
         }
     }
 }

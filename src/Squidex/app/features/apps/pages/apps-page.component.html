@@ -14,12 +14,30 @@
             <h3 class="empty-headline">You are not collaborating to any app yet</h3>
         </div>
 
-        <div class="card card-href card-app float-left" *ngFor="let app of apps" [routerLink]="['/app', app.name]">
+        <div class="card card-href card-app float-left" *ngFor="let app of apps; trackBy: trackByApp" [routerLink]="['/app', app.name]">
             <div class="card-body">
-                <h4 class="card-title">{{app.name}}</h4>
+                <div class="row no-gutters">
+                    <div class="col-auto card-left">
+                        <sqx-avatar [image]="app.image" [identifier]="app.name"></sqx-avatar>
+                    </div>
+                    <div class="col">
+                        <h4 class="card-title">{{app.displayName}}</h4>
 
-                <div class="card-text">
-                    <a [routerLink]="['/app', app.name]">Edit</a>
+                        <div class="card-text card-links">
+                            <a [routerLink]="['/app', app.name]" sqxStopClick>Edit</a>
+
+                            <span class="deeplinks">
+                                &nbsp;|
+                                <a [routerLink]="['/app', app.name, 'content']" sqxStopClick>Content</a> &middot;
+                                <a [routerLink]="['/app', app.name, 'assets']" sqxStopClick>Assets</a> &middot;
+                                <a [routerLink]="['/app', app.name, 'settings']" sqxStopClick>Settings</a>
+                            </span>
+                        </div>
+
+                        <div class="card-text">
+                            {{app.description}}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -52,7 +70,7 @@
             <div class="card-text">
                 <div>Start with our ready to use blog.</div>
                 <div>
-                    Sample Code: <a href="https://github.com/Squidex/squidex-samples/tree/master/csharp/Sample.Blog" (click)="$event.stopPropagation()" sqxExternalLink>C#</a>
+                    Sample Code: <a href="https://github.com/Squidex/squidex-samples/tree/master/csharp/Sample.Blog" sqxStopClick sqxExternalLink>C#</a>
                 </div>
             </div>
         </div>
@@ -69,7 +87,7 @@
             <div class="card-text">
                 <div>Create your profile page.</div>
                 <div>
-                    Sample Code: <a href="https://github.com/Squidex/squidex-samples/tree/master/csharp/Sample.Profile" (click)="$event.stopPropagation()" sqxExternalLink>C#</a>
+                    Sample Code: <a href="https://github.com/Squidex/squidex-samples/tree/master/csharp/Sample.Profile" sqxStopClick sqxExternalLink>C#</a>
                 </div>
             </div>
         </div>
@@ -86,26 +104,28 @@
             <div class="card-text">
                 <div>Create app for Squidex Identity.</div>
                 <div>
-                    <a href="https://github.com/Squidex/squidex-identity" (click)="$event.stopPropagation()" sqxExternalLink>Project</a>
+                    <a href="https://github.com/Squidex/squidex-identity" sqxStopClick sqxExternalLink>Project</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<ng-container *sqxModalView="addAppDialog;onRoot:true">
+<div *ngIf="info" class="info">{{info}}</div>
+
+<ng-container *sqxModal="addAppDialog">
     <sqx-app-form [template]="addAppTemplate"
         (complete)="addAppDialog.hide()">
     </sqx-app-form>
 </ng-container>
 
-<ng-container *sqxModalView="onboardingDialog;onRoot:true;closeAuto:false">
+<ng-container *sqxModal="onboardingDialog">
     <sqx-onboarding-dialog
         (close)="onboardingDialog.hide()">
     </sqx-onboarding-dialog>
 </ng-container>
 
-<ng-container *sqxModalView="newsDialog;onRoot:true;closeAuto:false">
+<ng-container *sqxModal="newsDialog">
     <sqx-news-dialog [features]="newsFeatures"
         (close)="newsDialog.hide()">
     </sqx-news-dialog>

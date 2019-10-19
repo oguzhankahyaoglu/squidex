@@ -7,7 +7,6 @@
 
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { DndModule } from 'ng2-dnd';
 
 import {
     HelpComponent,
@@ -17,6 +16,7 @@ import {
 } from '@app/shared';
 
 import {
+    ArrayValidationComponent,
     AssetsUIComponent,
     AssetsValidationComponent,
     BooleanUIComponent,
@@ -25,6 +25,7 @@ import {
     DateTimeValidationComponent,
     FieldComponent,
     FieldFormCommonComponent,
+    FieldFormComponent,
     FieldFormUIComponent,
     FieldFormValidationComponent,
     FieldWizardComponent,
@@ -37,6 +38,7 @@ import {
     ReferencesUIComponent,
     ReferencesValidationComponent,
     SchemaEditFormComponent,
+    SchemaExportFormComponent,
     SchemaFormComponent,
     SchemaPageComponent,
     SchemaPreviewUrlsFormComponent,
@@ -74,20 +76,21 @@ const routes: Routes = [
     imports: [
         SqxFrameworkModule,
         SqxSharedModule,
-        DndModule,
         RouterModule.forChild(routes)
     ],
     providers: [
         SchemaMustExistGuard
     ],
     declarations: [
-        FieldComponent,
+        ArrayValidationComponent,
         AssetsUIComponent,
         AssetsValidationComponent,
         BooleanUIComponent,
         BooleanValidationComponent,
         DateTimeUIComponent,
         DateTimeValidationComponent,
+        FieldComponent,
+        FieldFormComponent,
         FieldFormCommonComponent,
         FieldFormUIComponent,
         FieldFormValidationComponent,
@@ -101,6 +104,7 @@ const routes: Routes = [
         ReferencesUIComponent,
         ReferencesValidationComponent,
         SchemaEditFormComponent,
+        SchemaExportFormComponent,
         SchemaFormComponent,
         SchemaPageComponent,
         SchemaPreviewUrlsFormComponent,
@@ -112,4 +116,4 @@ const routes: Routes = [
         TagsValidationComponent
     ]
 })
-export class SqxFeatureSchemasModule { }
+export class SqxFeatureSchemasModule {}

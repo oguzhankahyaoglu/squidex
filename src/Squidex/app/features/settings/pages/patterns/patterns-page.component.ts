@@ -6,11 +6,9 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
-    AppPatternDto,
-    AppsState,
+    PatternDto,
     PatternsState
 } from '@app/shared';
 
@@ -21,20 +19,19 @@ import {
 })
 export class PatternsPageComponent implements OnInit {
     constructor(
-        public readonly appsState: AppsState,
         public readonly patternsState: PatternsState
     ) {
     }
 
     public ngOnInit() {
-        this.patternsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.patternsState.load();
     }
 
     public reload() {
-        this.patternsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.patternsState.load(true);
     }
 
-    public trackByPattern(index: number, pattern: AppPatternDto) {
+    public trackByPattern(index: number, pattern: PatternDto) {
         return pattern.id;
     }
 }

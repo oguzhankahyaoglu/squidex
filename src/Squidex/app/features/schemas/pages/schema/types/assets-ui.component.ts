@@ -5,8 +5,8 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { Component, Input } from '@angular/core';
-import { FormGroup } from '@angular/forms';
+import { Component, Input, OnInit } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
 
 import { AssetsFieldPropertiesDto, FieldDto } from '@app/shared';
 
@@ -15,7 +15,7 @@ import { AssetsFieldPropertiesDto, FieldDto } from '@app/shared';
     styleUrls: ['assets-ui.component.scss'],
     templateUrl: 'assets-ui.component.html'
 })
-export class AssetsUIComponent {
+export class AssetsUIComponent implements OnInit {
     @Input()
     public editForm: FormGroup;
 
@@ -24,4 +24,9 @@ export class AssetsUIComponent {
 
     @Input()
     public properties: AssetsFieldPropertiesDto;
+
+    public ngOnInit() {
+        this.editForm.setControl('resolveImage',
+            new FormControl(this.properties.resolveImage));
+    }
 }

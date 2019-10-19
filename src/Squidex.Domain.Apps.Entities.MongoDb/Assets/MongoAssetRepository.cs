@@ -35,23 +35,23 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Assets
 
         protected override Task SetupCollectionAsync(IMongoCollection<MongoAssetEntity> collection, CancellationToken ct = default)
         {
-            return collection.Indexes.CreateManyAsync(
-                new[]
-                {
-                    new CreateIndexModel<MongoAssetEntity>(
-                        Index
-                            .Ascending(x => x.AppId)
-                            .Ascending(x => x.IsDeleted)
-                            .Ascending(x => x.FileName)
-                            .Ascending(x => x.Tags)
-                            .Descending(x => x.LastModified)),
-                    new CreateIndexModel<MongoAssetEntity>(
-                        Index.Ascending(x => x.Slug))
-                },
-                ct);
+            return collection.Indexes.CreateManyAsync(new[]
+            {
+                new CreateIndexModel<MongoAssetEntity>(
+                    Index
+                        .Ascending(x => x.IndexedAppId)
+                        .Ascending(x => x.IsDeleted)
+                        .Ascending(x => x.Tags)
+                        .Descending(x => x.LastModified)),
+                new CreateIndexModel<MongoAssetEntity>(
+                    Index
+                        .Ascending(x => x.IndexedAppId)
+                        .Ascending(x => x.IsDeleted)
+                        .Ascending(x => x.Slug))
+            }, ct);
         }
 
-        public async Task<IResultList<IAssetEntity>> QueryAsync(Guid appId, Query query)
+        public async Task<IResultList<IAssetEntity>> QueryAsync(Guid appId, ClrQuery query)
         {
             using (Profiler.TraceMethod<MongoAssetRepository>("QueryAsyncByQuery"))
             {
@@ -93,28 +93,37 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Assets
             {
                 var find = Collection.Find(x => ids.Contains(x.Id)).SortByDescending(x => x.LastModified);
 
-                var assetItems = find.ToListAsync();
-                var assetCount = find.CountDocumentsAsync();
+                var assetItems = await find.ToListAsync();
 
-                await Task.WhenAll(assetItems, assetCount);
-
-                return ResultList.Create(assetCount.Result, assetItems.Result.OfType<IAssetEntity>());
+                return ResultList.Create(assetItems.Count, assetItems.OfType<IAssetEntity>());
             }
         }
 
-        public async Task<IAssetEntity> FindAssetAsync(string slug)
+        public async Task<IAssetEntity> FindAssetBySlugAsync(Guid appId, string slug)
         {
             using (Profiler.TraceMethod<MongoAssetRepository>())
             {
                 var assetEntity =
-                    await Collection.Find(x => x.Slug == slug)
+                    await Collection.Find(x => x.IndexedAppId == appId && !x.IsDeleted && x.Slug == slug)
                         .FirstOrDefaultAsync();
 
                 return assetEntity;
             }
         }
 
-        public async Task<IAssetEntity> FindAssetAsync(Guid id)
+        public async Task<IReadOnlyList<IAssetEntity>> QueryByHashAsync(Guid appId, string hash)
+        {
+            using (Profiler.TraceMethod<MongoAssetRepository>())
+            {
+                var assetEntities =
+                    await Collection.Find(x => x.IndexedAppId == appId && !x.IsDeleted && x.FileHash == hash)
+                        .ToListAsync();
+
+                return assetEntities.OfType<IAssetEntity>().ToList();
+            }
+        }
+
+        public async Task<IAssetEntity> FindAssetAsync(Guid id, bool allowDeleted = false)
         {
             using (Profiler.TraceMethod<MongoAssetRepository>())
             {
@@ -122,13 +131,18 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Assets
                     await Collection.Find(x => x.Id == id)
                         .FirstOrDefaultAsync();
 
+                if (assetEntity?.IsDeleted == true && !allowDeleted)
+                {
+                    return null;
+                }
+
                 return assetEntity;
             }
         }
 
-        public Task RemoveAsync(Guid appId)
+        public Task RemoveAsync(Guid key)
         {
-            return Collection.DeleteManyAsync(x => x.IndexedAppId == appId);
+            return Collection.DeleteOneAsync(x => x.Id == key);
         }
     }
 }

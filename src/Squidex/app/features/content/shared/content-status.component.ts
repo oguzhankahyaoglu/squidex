@@ -20,6 +20,9 @@ export class ContentStatusComponent {
     public status: string;
 
     @Input()
+    public statusColor: string;
+
+    @Input()
     public scheduledTo?: string;
 
     @Input()
@@ -32,7 +35,7 @@ export class ContentStatusComponent {
     public showLabel = false;
 
     @Input()
-    public alignMiddle = true;
+    public small = false;
 
     public get tooltipText() {
         if (this.scheduledAt) {
@@ -50,4 +53,3 @@ export class ContentStatusComponent {
         }
     }
 }
-

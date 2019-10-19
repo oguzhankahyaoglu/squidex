@@ -9,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
+using Microsoft.Extensions.Options;
 using NodaTime;
 using Squidex.Domain.Apps.Core.HandleRules;
 using Squidex.Domain.Apps.Core.HandleRules.EnrichedEvents;
@@ -19,6 +20,7 @@ using Squidex.Domain.Apps.Events.Contents;
 using Squidex.Infrastructure;
 using Squidex.Infrastructure.EventSourcing;
 using Squidex.Infrastructure.Log;
+using Squidex.Infrastructure.Reflection;
 using Xunit;
 
 #pragma warning disable xUnit2009 // Do not use boolean check to check for string equality
@@ -84,7 +86,10 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
 
             var log = A.Fake<ISemanticLog>();
 
-            sut = new RuleService(new[] { ruleTriggerHandler }, new[] { ruleActionHandler }, eventEnricher, TestUtils.DefaultSerializer, clock, log, typeNameRegistry);
+            sut = new RuleService(Options.Create(new RuleOptions()),
+                new[] { ruleTriggerHandler },
+                new[] { ruleActionHandler },
+                eventEnricher, TestUtils.DefaultSerializer, clock, log, typeNameRegistry);
         }
 
         [Fact]
@@ -241,11 +246,11 @@ namespace Squidex.Domain.Apps.Core.Operations.HandleRules
             Assert.Equal(actionDescription, job.Description);
 
             Assert.Equal(now, job.Created);
-            Assert.Equal(now.Plus(Duration.FromDays(2)), job.Expires);
+            Assert.Equal(now.Plus(Duration.FromDays(30)), job.Expires);
 
             Assert.Equal(enrichedEvent.AppId.Id, job.AppId);
 
-            Assert.NotEqual(Guid.Empty, job.JobId);
+            Assert.NotEqual(Guid.Empty, job.Id);
 
             A.CallTo(() => eventEnricher.EnrichAsync(enrichedEvent, A<Envelope<AppEvent>>.That.Matches(x => x.Payload == @event.Payload)))
                 .MustHaveHappened();

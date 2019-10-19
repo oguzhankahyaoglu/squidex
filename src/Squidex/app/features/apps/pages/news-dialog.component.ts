@@ -15,13 +15,17 @@ import { FeatureDto } from '@app/shared';
     templateUrl: './news-dialog.component.html'
 })
 export class NewsDialogComponent {
-    @Input()
-    public features: FeatureDto[];
-
     @Output()
     public close = new EventEmitter();
 
+    @Input()
+    public features: ReadonlyArray<FeatureDto>;
+
     public emitClose() {
         this.close.emit();
+    }
+
+    public trackByFeature(index: number, feature: FeatureDto) {
+        return feature;
     }
 }

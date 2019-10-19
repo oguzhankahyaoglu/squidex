@@ -8,31 +8,26 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 
 import {
     AnalyticsService,
     ApiUrlConfig,
     HTTP,
-    Model,
+    mapVersioned,
     pretifyError,
     Version,
     Versioned
 } from '@app/framework';
 
-export class PlansDto extends Model {
-    constructor(
-        public readonly currentPlanId: string,
-        public readonly planOwner: string,
-        public readonly hasPortal: boolean,
-        public readonly plans: PlanDto[],
-        public readonly version: Version
-    ) {
-        super();
-    }
-}
+export type PlansDto = Versioned<{
+    readonly currentPlanId: string,
+    readonly planOwner: string,
+    readonly hasPortal: boolean,
+    readonly plans: ReadonlyArray<PlanDto>
+}>;
 
-export class PlanDto extends Model {
+export class PlanDto {
     constructor(
         public readonly id: string,
         public readonly name: string,
@@ -43,22 +38,15 @@ export class PlanDto extends Model {
         public readonly maxAssetSize: number,
         public readonly maxContributors: number
     ) {
-        super();
     }
 }
 
-export class PlanChangedDto {
-    constructor(
-        public readonly redirectUri: string
-    ) {
-    }
+export interface PlanChangedDto {
+    readonly redirectUri?: string;
 }
 
-export class ChangePlanDto {
-    constructor(
-        public readonly planId: string
-    ) {
-    }
+export interface ChangePlanDto {
+    readonly planId: string;
 }
 
 @Injectable()
@@ -73,44 +61,43 @@ export class PlansService {
     public getPlans(appName: string): Observable<PlansDto> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/plans`);
 
-        return HTTP.getVersioned<any>(this.http, url).pipe(
-                map(response => {
-                    const body = response.payload.body;
+        return HTTP.getVersioned(this.http, url).pipe(
+            mapVersioned(({ body }) => {
+                const items: any[] = body.plans;
 
-                    const items: any[] = body.plans;
+                const { hasPortal, currentPlanId, planOwner } = body;
 
-                    return new PlansDto(
-                        body.currentPlanId,
-                        body.planOwner,
-                        body.hasPortal,
-                        items.map(item => {
-                            return new PlanDto(
-                                item.id,
-                                item.name,
-                                item.costs,
-                                item.yearlyId,
-                                item.yearlyCosts,
-                                item.maxApiCalls,
-                                item.maxAssetSize,
-                                item.maxContributors);
-                        }),
-                        response.version);
-                }),
-                pretifyError('Failed to load plans. Please reload.'));
+                const plans = {
+                    currentPlanId,
+                    planOwner,
+                    plans: items.map(item =>
+                        new PlanDto(
+                            item.id,
+                            item.name,
+                            item.costs,
+                            item.yearlyId,
+                            item.yearlyCosts,
+                            item.maxApiCalls,
+                            item.maxAssetSize,
+                            item.maxContributors)),
+                    hasPortal
+                };
+
+                return plans;
+            }),
+            pretifyError('Failed to load plans. Please reload.'));
     }
 
     public putPlan(appName: string, dto: ChangePlanDto, version: Version): Observable<Versioned<PlanChangedDto>> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/plan`);
 
-        return HTTP.putVersioned<any>(this.http, url, dto, version).pipe(
-                map(response => {
-                    const body = response.payload.body;
-
-                    return new Versioned(response.version, new PlanChangedDto(body.redirectUri));
-                }),
-                tap(() => {
-                    this.analytics.trackEvent('Plan', 'Changed', appName);
-                }),
-                pretifyError('Failed to change plan. Please reload.'));
+        return HTTP.putVersioned(this.http, url, dto, version).pipe(
+            mapVersioned(payload => {
+                return <PlanChangedDto>payload.body;
+            }),
+            tap(() => {
+                this.analytics.trackEvent('Plan', 'Changed', appName);
+            }),
+            pretifyError('Failed to change plan. Please reload.'));
     }
 }

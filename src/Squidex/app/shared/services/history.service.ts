@@ -78,20 +78,21 @@ export class HistoryService {
     ) {
     }
 
-    public getHistory(appName: string, channel: string): Observable<HistoryEventDto[]> {
+    public getHistory(appName: string, channel: string): Observable<ReadonlyArray<HistoryEventDto>> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/history?channel=${channel}`);
 
         return this.http.get<any[]>(url).pipe(
-                map(response => {
-                    return response.map(item => {
-                        return new HistoryEventDto(
-                            item.eventId,
-                            item.actor,
-                            item.message,
-                            item.version,
-                            DateTime.parseISO_UTC(item.created));
-                    });
-                }),
-                pretifyError('Failed to load history. Please reload.'));
+            map(body => {
+                const history = body.map(item =>
+                    new HistoryEventDto(
+                        item.eventId,
+                        item.actor,
+                        item.message,
+                        item.version,
+                        DateTime.parseISO_UTC(item.created)));
+
+                return history;
+            }),
+            pretifyError('Failed to load history. Please reload.'));
     }
 }

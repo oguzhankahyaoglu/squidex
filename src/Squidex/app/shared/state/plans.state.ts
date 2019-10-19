@@ -7,64 +7,63 @@
 
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { distinctUntilChanged, map, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 
 import {
     DialogService,
-    ImmutableArray,
-    notify,
+    shareSubscribed,
     State,
     Version
 } from '@app/framework';
 
 import { AuthService } from './../services/auth.service';
+import { PlanDto, PlansService } from './../services/plans.service';
 import { AppsState } from './apps.state';
 
-import {
-    ChangePlanDto,
-    PlanDto,
-    PlansService
-} from './../services/plans.service';
-
-interface PlanInfo {
+export interface PlanInfo {
+    // The plan.
     plan: PlanDto;
 
+    // Indicates if the yearly subscription is selected.
     isYearlySelected?: boolean;
+
+    // Indicates if the monthly subscription is selected.
     isSelected?: boolean;
 }
 
 interface Snapshot {
-    plans: ImmutableArray<PlanInfo>;
+    // The current plans.
+    plans: ReadonlyArray<PlanInfo>;
 
+    // Indicates if the user is the plan owner.
     isOwner?: boolean;
+
+    // Indicates if the plans are loaded.
     isLoaded?: boolean;
 
+    // Indicates if there is a billing portal for the current Squidex instance.
     hasPortal?: boolean;
 
+    // The app version.
     version: Version;
 }
 
 @Injectable()
 export class PlansState extends State<Snapshot> {
     public plans =
-        this.changes.pipe(map(x => x.plans),
-            distinctUntilChanged());
+        this.project(x => x.plans);
 
     public isOwner =
-        this.changes.pipe(map(x => !!x.isOwner),
-            distinctUntilChanged());
+        this.project(x => x.isOwner === true);
 
     public isLoaded =
-        this.changes.pipe(map(x => !!x.isLoaded),
-            distinctUntilChanged());
+        this.project(x => x.isLoaded === true);
 
     public isDisabled =
-        this.changes.pipe(map(x => !x.isOwner),
-            distinctUntilChanged());
+        this.project(x => !x.isOwner);
 
     public hasPortal =
-        this.changes.pipe(map(x => x.hasPortal),
-            distinctUntilChanged());
+        this.project(x => x.hasPortal);
 
     public window = window;
 
@@ -74,7 +73,7 @@ export class PlansState extends State<Snapshot> {
         private readonly dialogs: DialogService,
         private readonly plansService: PlansService
     ) {
-        super({ plans: ImmutableArray.empty(), version: new Version('') });
+        super({ plans: [], version: Version.EMPTY });
     }
 
     public load(isReload = false, overridePlanId?: string): Observable<any> {
@@ -83,42 +82,42 @@ export class PlansState extends State<Snapshot> {
         }
 
         return this.plansService.getPlans(this.appName).pipe(
-            tap(dto => {
+            tap(({ version, payload }) => {
                 if (isReload) {
                     this.dialogs.notifyInfo('Plans reloaded.');
                 }
 
                 this.next(s => {
-                    const planId = overridePlanId || dto.currentPlanId;
-                    const plans = ImmutableArray.of(dto.plans.map(x => this.createPlan(x, planId)));
+                    const planId = overridePlanId || payload.currentPlanId;
+                    const plans = payload.plans.map(x => this.createPlan(x, planId));
 
                     return {
                         ...s,
                         plans: plans,
-                        isOwner: !dto.planOwner || dto.planOwner === this.userId,
+                        isOwner: !payload.planOwner || payload.planOwner === this.userId,
                         isLoaded: true,
-                        version: dto.version,
-                        hasPortal: dto.hasPortal
+                        version,
+                        hasPortal: payload.hasPortal
                     };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
     public change(planId: string): Observable<any> {
-        return this.plansService.putPlan(this.appName, new ChangePlanDto(planId), this.version).pipe(
-            tap(dto => {
-                if (dto.payload.redirectUri && dto.payload.redirectUri.length > 0) {
-                    this.window.location.href = dto.payload.redirectUri;
+        return this.plansService.putPlan(this.appName, { planId }, this.version).pipe(
+            tap(({ payload, version }) => {
+                if (payload.redirectUri && payload.redirectUri.length > 0) {
+                    this.window.location.href = payload.redirectUri;
                 } else {
                     this.next(s => {
                         const plans = s.plans.map(x => this.createPlan(x.plan, planId));
 
-                        return { ...s, plans, isOwner: true, version: dto.version };
+                        return { ...s, plans, isOwner: true, version };
                     });
                 }
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
     private createPlan(plan: PlanDto, id: string) {
@@ -137,4 +136,3 @@ export class PlansState extends State<Snapshot> {
         return this.snapshot.version;
     }
 }
-

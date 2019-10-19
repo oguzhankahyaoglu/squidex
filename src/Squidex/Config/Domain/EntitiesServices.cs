@@ -6,6 +6,8 @@
 // ==========================================================================
 
 using System;
+using GraphQL;
+using GraphQL.DataLoader;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -20,23 +22,24 @@ using Squidex.Domain.Apps.Core.Scripting;
 using Squidex.Domain.Apps.Core.Tags;
 using Squidex.Domain.Apps.Entities;
 using Squidex.Domain.Apps.Entities.Apps;
-using Squidex.Domain.Apps.Entities.Apps.Commands;
 using Squidex.Domain.Apps.Entities.Apps.Indexes;
+using Squidex.Domain.Apps.Entities.Apps.Invitation;
 using Squidex.Domain.Apps.Entities.Apps.Templates;
 using Squidex.Domain.Apps.Entities.Assets;
 using Squidex.Domain.Apps.Entities.Assets.Commands;
+using Squidex.Domain.Apps.Entities.Assets.Queries;
 using Squidex.Domain.Apps.Entities.Backup;
 using Squidex.Domain.Apps.Entities.Comments;
 using Squidex.Domain.Apps.Entities.Comments.Commands;
 using Squidex.Domain.Apps.Entities.Contents;
-using Squidex.Domain.Apps.Entities.Contents.Commands;
-using Squidex.Domain.Apps.Entities.Contents.Edm;
 using Squidex.Domain.Apps.Entities.Contents.GraphQL;
+using Squidex.Domain.Apps.Entities.Contents.Queries;
 using Squidex.Domain.Apps.Entities.Contents.Text;
 using Squidex.Domain.Apps.Entities.History;
+using Squidex.Domain.Apps.Entities.History.Notifications;
 using Squidex.Domain.Apps.Entities.Rules;
-using Squidex.Domain.Apps.Entities.Rules.Commands;
 using Squidex.Domain.Apps.Entities.Rules.Indexes;
+using Squidex.Domain.Apps.Entities.Rules.Queries;
 using Squidex.Domain.Apps.Entities.Rules.UsageTracking;
 using Squidex.Domain.Apps.Entities.Schemas;
 using Squidex.Domain.Apps.Entities.Schemas.Commands;
@@ -44,6 +47,7 @@ using Squidex.Domain.Apps.Entities.Schemas.Indexes;
 using Squidex.Domain.Apps.Entities.Tags;
 using Squidex.Infrastructure.Assets;
 using Squidex.Infrastructure.Commands;
+using Squidex.Infrastructure.Email;
 using Squidex.Infrastructure.EventSourcing;
 using Squidex.Infrastructure.Migrations;
 using Squidex.Infrastructure.Orleans;
@@ -63,7 +67,7 @@ namespace Squidex.Config.Domain
                     c.GetRequiredService<IOptions<UrlsOptions>>(),
                     c.GetRequiredService<IAssetStore>(),
                     exposeSourceUrl))
-                .As<IGraphQLUrlGenerator>().As<IRuleUrlGenerator>().As<IAssetUrlGenerator>();
+                .As<IGraphQLUrlGenerator>().As<IRuleUrlGenerator>().As<IAssetUrlGenerator>().As<IEmailUrlGenerator>();
 
             services.AddSingletonAs<HistoryService>()
                 .As<IEventConsumer>().As<IHistoryService>();
@@ -71,23 +75,59 @@ namespace Squidex.Config.Domain
             services.AddSingletonAs<AssetUsageTracker>()
                 .As<IEventConsumer>().As<IAssetUsageTracker>();
 
+            services.AddSingletonAs(x => new FuncDependencyResolver(t => x.GetRequiredService(t)))
+                .As<IDependencyResolver>();
+
+            services.AddSingletonAs<DataLoaderContextAccessor>()
+                .As<IDataLoaderContextAccessor>();
+
+            services.AddSingletonAs<DataLoaderDocumentListener>()
+                .AsSelf();
+
+            services.AddSingletonAs<CachingGraphQLService>()
+                .As<IGraphQLService>();
+
             services.AddSingletonAs<CachingGraphQLService>()
                 .As<IGraphQLService>();
 
             services.AddSingletonAs<TempFolderBackupArchiveLocation>()
                 .As<IBackupArchiveLocation>();
 
+            services.AddSingletonAs<CommentsLoader>()
+                .As<ICommentsLoader>();
+
             services.AddSingletonAs<AppProvider>()
                 .As<IAppProvider>();
+
+            services.AddSingletonAs<AppUISettings>()
+                .As<IAppUISettings>();
+
+            services.AddSingletonAs<AssetEnricher>()
+                .As<IAssetEnricher>();
+
+            services.AddSingletonAs<AssetQueryParser>()
+                .AsSelf();
 
             services.AddSingletonAs<AssetQueryService>()
                 .As<IAssetQueryService>();
 
+            services.AddSingletonAs<AssetLoader>()
+                .As<IAssetLoader>();
+
+            services.AddSingletonAs(c => new Lazy<IContentQueryService>(() => c.GetRequiredService<IContentQueryService>()))
+                .AsSelf();
+
+            services.AddSingletonAs<ContentQueryParser>()
+                .AsSelf();
+
+            services.AddSingletonAs<ContentEnricher>()
+                .As<IContentEnricher>();
+
             services.AddSingletonAs<ContentQueryService>()
                 .As<IContentQueryService>();
 
-            services.AddSingletonAs<ContentVersionLoader>()
-                .As<IContentVersionLoader>();
+            services.AddSingletonAs<ContentLoader>()
+                .As<IContentLoader>();
 
             services.AddSingletonAs<AppHistoryEventsCreator>()
                 .As<IHistoryEventsCreator>();
@@ -98,10 +138,13 @@ namespace Squidex.Config.Domain
             services.AddSingletonAs<SchemaHistoryEventsCreator>()
                 .As<IHistoryEventsCreator>();
 
-            services.AddSingletonAs<RolePermissionsProvider>()
-                .AsSelf();
+            services.AddSingletonAs<DynamicContentWorkflow>()
+                .AsOptional<IContentWorkflow>();
 
-            services.AddSingletonAs<EdmModelBuilder>()
+            services.AddSingletonAs<DefaultWorkflowsValidator>()
+                .AsOptional<IWorkflowsValidator>();
+
+            services.AddSingletonAs<RolePermissionsProvider>()
                 .AsSelf();
 
             services.AddSingletonAs<GrainTagService>()
@@ -118,6 +161,12 @@ namespace Squidex.Config.Domain
 
             services.AddSingletonAs<JintScriptEngine>()
                 .AsOptional<IScriptEngine>();
+
+            services.AddSingletonAs<RuleQueryService>()
+                .As<IRuleQueryService>();
+
+            services.AddSingletonAs<RuleEnricher>()
+                .As<IRuleEnricher>();
 
             services.AddSingletonAs<GrainBootstrap<IContentSchedulerGrain>>()
                 .AsSelf();
@@ -136,17 +185,41 @@ namespace Squidex.Config.Domain
 
                 var result = new InitialPatterns();
 
-                foreach (var pattern in uiOptions.Value.RegexSuggestions)
+                foreach (var (key, value) in uiOptions.Value.RegexSuggestions)
                 {
-                    if (!string.IsNullOrWhiteSpace(pattern.Key) &&
-                        !string.IsNullOrWhiteSpace(pattern.Value))
+                    if (!string.IsNullOrWhiteSpace(key) &&
+                        !string.IsNullOrWhiteSpace(value))
                     {
-                        result[Guid.NewGuid()] = new AppPattern(pattern.Key, pattern.Value);
+                        result[Guid.NewGuid()] = new AppPattern(key, value);
                     }
                 }
 
                 return result;
             });
+
+            var emailOptions = config.GetSection("email:smtp").Get<SmptOptions>();
+
+            if (emailOptions.IsConfigured())
+            {
+                services.AddSingleton(Options.Create(emailOptions));
+
+                services.Configure<NotificationEmailTextOptions>(
+                    config.GetSection("email:notifications"));
+
+                services.AddSingletonAs<SmtpEmailSender>()
+                    .As<IEmailSender>();
+
+                services.AddSingletonAs<NotificationEmailSender>()
+                    .AsOptional<INotificationEmailSender>();
+            }
+            else
+            {
+                services.AddSingletonAs<NoopNotificationEmailSender>()
+                    .AsOptional<INotificationEmailSender>();
+            }
+
+            services.AddSingletonAs<NotificationEmailEventConsumer>()
+                .As<IEventConsumer>();
         }
 
         private static void AddCommandPipeline(this IServiceCollection services)
@@ -172,37 +245,37 @@ namespace Squidex.Config.Domain
             services.AddSingletonAs<EnrichWithSchemaIdCommandMiddleware>()
                 .As<ICommandMiddleware>();
 
+            services.AddSingletonAs<CustomCommandMiddlewareRunner>()
+                .As<ICommandMiddleware>();
+
             services.AddSingletonAs<InviteUserCommandMiddleware>()
+                .As<ICommandMiddleware>();
+
+            services.AddSingletonAs<AppsIndex>()
+                .As<ICommandMiddleware>().As<IAppsIndex>();
+
+            services.AddSingletonAs<RulesIndex>()
+                .As<ICommandMiddleware>().As<IRulesIndex>();
+
+            services.AddSingletonAs<SchemasIndex>()
+                .As<ICommandMiddleware>().As<ISchemasIndex>();
+
+            services.AddSingletonAs<AppCommandMiddleware>()
                 .As<ICommandMiddleware>();
 
             services.AddSingletonAs<AssetCommandMiddleware>()
                 .As<ICommandMiddleware>();
 
-            services.AddSingletonAs<AppsByNameIndexCommandMiddleware>()
+            services.AddSingletonAs<ContentCommandMiddleware>()
                 .As<ICommandMiddleware>();
 
-            services.AddSingletonAs<GrainCommandMiddleware<AppCommand, IAppGrain>>()
-                .As<ICommandMiddleware>();
-
-            services.AddSingletonAs<GrainCommandMiddleware<CommentsCommand, ICommentGrain>>()
-                .As<ICommandMiddleware>();
-
-            services.AddSingletonAs<GrainCommandMiddleware<ContentCommand, IContentGrain>>()
+            services.AddSingletonAs<GrainCommandMiddleware<CommentsCommand, ICommentsGrain>>()
                 .As<ICommandMiddleware>();
 
             services.AddSingletonAs<GrainCommandMiddleware<SchemaCommand, ISchemaGrain>>()
                 .As<ICommandMiddleware>();
 
-            services.AddSingletonAs<GrainCommandMiddleware<RuleCommand, IRuleGrain>>()
-                .As<ICommandMiddleware>();
-
-            services.AddSingletonAs<AppsByUserIndexCommandMiddleware>()
-                .As<ICommandMiddleware>();
-
-            services.AddSingletonAs<RulesByAppIndexCommandMiddleware>()
-                .As<ICommandMiddleware>();
-
-            services.AddSingletonAs<SchemasByAppIndexCommandMiddleware>()
+            services.AddSingletonAs<RuleCommandMiddleware>()
                 .As<ICommandMiddleware>();
 
             services.AddSingletonAs<SingletonCommandMiddleware>()
@@ -222,6 +295,8 @@ namespace Squidex.Config.Domain
 
             services.AddSingletonAs<UsageTrackerCommandMiddleware>()
                 .As<ICommandMiddleware>();
+
+            services.AddSingleton(typeof(IEventEnricher<>), typeof(SquidexEventEnricher<>));
         }
 
         private static void AddBackupHandlers(this IServiceCollection services)

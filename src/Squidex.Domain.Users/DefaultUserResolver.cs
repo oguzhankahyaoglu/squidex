@@ -28,7 +28,7 @@ namespace Squidex.Domain.Users
             this.userFactory = userFactory;
         }
 
-        public async Task<bool> CreateUserIfNotExists(string email)
+        public async Task<bool> CreateUserIfNotExists(string email, bool invited)
         {
             var user = userFactory.Create(email);
 
@@ -38,7 +38,9 @@ namespace Squidex.Domain.Users
 
                 if (result.Succeeded)
                 {
-                    await userManager.UpdateAsync(user, new UserValues { DisplayName = email });
+                    var values = new UserValues { DisplayName = email, Invited = invited };
+
+                    await userManager.UpdateAsync(user, values);
                 }
 
                 return result.Succeeded;
@@ -66,6 +68,13 @@ namespace Squidex.Domain.Users
             var result = await userManager.QueryByEmailAsync(email);
 
             return result.OfType<IUser>().ToList();
+        }
+
+        public async Task<Dictionary<string, IUser>> QueryManyAsync(string[] ids)
+        {
+            var result = await userManager.QueryByIdsAync(ids);
+
+            return result.OfType<IUser>().ToDictionary(x => x.Id);
         }
     }
 }

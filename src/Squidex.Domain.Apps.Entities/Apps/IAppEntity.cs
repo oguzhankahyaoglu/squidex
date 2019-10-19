@@ -6,6 +6,7 @@
 // ==========================================================================
 
 using Squidex.Domain.Apps.Core.Apps;
+using Squidex.Domain.Apps.Core.Contents;
 
 namespace Squidex.Domain.Apps.Entities.Apps
 {
@@ -17,9 +18,15 @@ namespace Squidex.Domain.Apps.Entities.Apps
     {
         string Name { get; }
 
+        string Label { get; }
+
+        string Description { get; }
+
         Roles Roles { get; }
 
         AppPlan Plan { get; }
+
+        AppImage Image { get; }
 
         AppClients Clients { get; }
 
@@ -28,6 +35,8 @@ namespace Squidex.Domain.Apps.Entities.Apps
         AppContributors Contributors { get; }
 
         LanguagesConfig LanguagesConfig { get; }
+
+        Workflows Workflows { get; }
 
         bool IsArchived { get; }
     }

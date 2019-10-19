@@ -5,12 +5,15 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+// tslint:disable:no-pipe-impure
+
 import { ChangeDetectorRef, OnDestroy, Pipe, PipeTransform } from '@angular/core';
 import { Observable, of, Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import {
     ApiUrlConfig,
+    AssetDto,
     formatHistoryMessage,
     HistoryEventDto,
     MathHelper,
@@ -64,13 +67,14 @@ export class HistoryMessagePipe implements OnDestroy, PipeTransform {
 
 class UserAsyncPipe implements OnDestroy {
     private lastUserId: string;
-    private lastValue: string | null = null;
+    private lastValue: string | undefined = undefined;
     private subscription: Subscription;
 
-    constructor(
+    constructor(loading: string,
         private readonly users: UsersProviderService,
         private readonly changeDetector: ChangeDetectorRef
     ) {
+        this.lastValue = loading;
     }
 
     public ngOnDestroy() {
@@ -79,7 +83,7 @@ class UserAsyncPipe implements OnDestroy {
         }
     }
 
-    protected transformInternal(userId: string, transform: (users: UsersProviderService) => Observable<string | null>): string | null {
+    protected transformInternal(userId: string, transform: (users: UsersProviderService) => Observable<string | null>) {
         if (this.lastUserId !== userId) {
             this.lastUserId = userId;
 
@@ -88,7 +92,7 @@ class UserAsyncPipe implements OnDestroy {
             }
 
             this.subscription = transform(this.users).subscribe(value => {
-                this.lastValue = value;
+                this.lastValue = value || undefined;
 
                 this.changeDetector.markForCheck();
             });
@@ -104,10 +108,10 @@ class UserAsyncPipe implements OnDestroy {
 })
 export class UserNamePipe extends UserAsyncPipe implements PipeTransform {
     constructor(users: UsersProviderService, changeDetector: ChangeDetectorRef) {
-        super(users, changeDetector);
+        super('Loading...', users, changeDetector);
     }
 
-    public transform(userId: string, placeholder = 'Me'): string | null {
+    public transform(userId: string, placeholder = 'Me') {
         return super.transformInternal(userId, users => users.getUser(userId, placeholder).pipe(map(u => u.displayName)));
     }
 }
@@ -118,10 +122,10 @@ export class UserNamePipe extends UserAsyncPipe implements PipeTransform {
 })
 export class UserNameRefPipe extends UserAsyncPipe implements PipeTransform {
     constructor(users: UsersProviderService, changeDetector: ChangeDetectorRef) {
-        super(users, changeDetector);
+        super('Loading...', users, changeDetector);
     }
 
-    public transform(userId: string, placeholder: string | null = 'Me'): string | null {
+    public transform(userId: string, placeholder: string | null = 'Me') {
         return super.transformInternal(userId, users => {
             const parts = userId.split(':');
 
@@ -176,10 +180,10 @@ export class UserPicturePipe extends UserAsyncPipe implements PipeTransform {
     constructor(users: UsersProviderService, changeDetector: ChangeDetectorRef,
         private readonly apiUrl: ApiUrlConfig
     ) {
-        super(users, changeDetector);
+        super('', users, changeDetector);
     }
 
-    public transform(userId: string): string | null {
+    public transform(userId: string) {
         return super.transformInternal(userId, users => users.getUser(userId).pipe(map(u => this.apiUrl.buildUrl(`api/users/${u.id}/picture`))));
     }
 }
@@ -192,10 +196,10 @@ export class UserPictureRefPipe extends UserAsyncPipe implements PipeTransform {
     constructor(users: UsersProviderService, changeDetector: ChangeDetectorRef,
         private readonly apiUrl: ApiUrlConfig
     ) {
-        super(users, changeDetector);
+        super('', users, changeDetector);
     }
 
-    public transform(userId: string): string | null {
+    public transform(userId: string) {
         return super.transformInternal(userId, users => {
             const parts = userId.split(':');
 
@@ -213,8 +217,13 @@ export class UserPictureRefPipe extends UserAsyncPipe implements PipeTransform {
     pure: true
 })
 export class AssetUrlPipe implements PipeTransform {
-    public transform(asset: { url: any }): string {
-        return `${asset.url}?q=${MathHelper.guid()}`;
+    constructor(
+        private readonly apiUrl: ApiUrlConfig
+    ) {
+    }
+
+    public transform(asset: AssetDto): string {
+        return `${asset.fullUrl(this.apiUrl)}&sq=${MathHelper.guid()}`;
     }
 }
 
@@ -228,8 +237,8 @@ export class AssetPreviewUrlPipe implements PipeTransform {
     ) {
     }
 
-    public transform(asset: { id: any, fileVersion: number }): string {
-        return this.apiUrl.buildUrl(`api/assets/${asset.id}?version=${asset.fileVersion}`);
+    public transform(asset: AssetDto): string {
+        return asset.fullUrl(this.apiUrl);
     }
 }
 
@@ -251,7 +260,8 @@ export class FileIconPipe implements PipeTransform {
         ];
 
         let mimeIcon: string;
-        let mimeParts = asset.mimeType.split('/');
+
+        const mimeParts = asset.mimeType.split('/');
 
         if (mimeParts.length === 2 && mimeParts[0].toLowerCase() === 'video') {
             mimeIcon = 'video';

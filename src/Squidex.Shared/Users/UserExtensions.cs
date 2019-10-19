@@ -19,6 +19,11 @@ namespace Squidex.Shared.Users
             return new PermissionSet(user.GetClaimValues(SquidexClaimTypes.Permissions).Select(x => new Permission(x)));
         }
 
+        public static bool IsInvited(this IUser user)
+        {
+            return user.HasClaimValue(SquidexClaimTypes.Invited, "true");
+        }
+
         public static bool IsHidden(this IUser user)
         {
             return user.HasClaimValue(SquidexClaimTypes.Hidden, "true");
@@ -49,6 +54,11 @@ namespace Squidex.Shared.Users
             return user.HasClaimValue(SquidexClaimTypes.PictureUrl, SquidexClaimTypes.PictureUrlStore);
         }
 
+        public static string ClientSecret(this IUser user)
+        {
+            return user.GetClaimValue(SquidexClaimTypes.ClientSecret);
+        }
+
         public static string PictureUrl(this IUser user)
         {
             return user.GetClaimValue(SquidexClaimTypes.PictureUrl);
@@ -76,7 +86,9 @@ namespace Squidex.Shared.Users
 
         public static bool HasClaimValue(this IUser user, string type, string value)
         {
-            return user.Claims.Any(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Value, value, StringComparison.OrdinalIgnoreCase));
+            return user.Claims.Any(x =>
+                string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.Value, value, StringComparison.OrdinalIgnoreCase));
         }
 
         public static string PictureNormalizedUrl(this IUser user)

@@ -1,4 +1,4 @@
-<sqx-title message="{app} | Schemas" parameter1="app" [value1]="appsState.appName"></sqx-title>
+<sqx-title message="Contents"></sqx-title>
 
 <sqx-panel theme="dark" desiredWidth="16rem" showSecondHeader="true">
     <ng-container title>
@@ -18,11 +18,9 @@
     <ng-container content>
         <ng-container *ngIf="schemasState.publishedSchemas | async; let schemas">
             <sqx-schema-category *ngFor="let category of schemasState.categories | async; trackBy: trackByCategory"
-                [name]="category"
-                [schemas]="schemas"
+                [schemaCategory]="category"
                 [schemasFilter]="schemasFilter.valueChanges | async"
-                [routeSingletonToContent]="true"
-                [isReadonly]="true">
+                [forContent]="true">
             </sqx-schema-category>
         </ng-container>
     </ng-container>

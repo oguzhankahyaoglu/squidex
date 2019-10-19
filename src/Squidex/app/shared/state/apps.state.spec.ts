@@ -6,27 +6,20 @@
  */
 
 import { of } from 'rxjs';
-import { IMock, Mock, Times } from 'typemoq';
+import { IMock, Mock } from 'typemoq';
 
 import {
     AppDto,
     AppsService,
     AppsState,
-    CreateAppDto,
-    DateTime,
-    DialogService,
-    Permission
-} from './../';
+    DialogService
+} from '@app/shared/internal';
+
+import { createApp } from '../services/apps.service.spec';
 
 describe('AppsState', () => {
-    const now = DateTime.now();
-
-    const oldApps = [
-        new AppDto('id1', 'old-name1', [new Permission('Owner')], now, now, 'Free', 'Plan'),
-        new AppDto('id2', 'old-name2', [new Permission('Owner')], now, now, 'Free', 'Plan')
-    ];
-
-    const newApp = new AppDto('id3', 'new-name', [new Permission('Owner')], now, now, 'Free', 'Plan');
+    const app1 = createApp(1);
+    const app2 = createApp(2);
 
     let dialogs: IMock<DialogService>;
     let appsService: IMock<AppsService>;
@@ -38,26 +31,29 @@ describe('AppsState', () => {
         appsService = Mock.ofType<AppsService>();
 
         appsService.setup(x => x.getApps())
-            .returns(() => of(oldApps))
-            .verifiable(Times.once());
+            .returns(() => of([app1, app2])).verifiable();
 
         appsState = new AppsState(appsService.object, dialogs.object);
         appsState.load().subscribe();
     });
 
+    afterEach(() => {
+        appsService.verifyAll();
+    });
+
     it('should load apps', () => {
-        expect(appsState.snapshot.apps.values).toEqual(oldApps);
+        expect(appsState.snapshot.apps).toEqual([app1, app2]);
     });
 
     it('should select app', () => {
         let selectedApp: AppDto;
 
-        appsState.select(oldApps[0].name).subscribe(x => {
+        appsState.select(app1.name).subscribe(x => {
             selectedApp = x!;
-        }).unsubscribe();
+        });
 
-        expect(selectedApp!).toBe(oldApps[0]);
-        expect(appsState.snapshot.selectedApp).toBe(oldApps[0]);
+        expect(selectedApp!).toBe(app1);
+        expect(appsState.snapshot.selectedApp).toBe(app1);
     });
 
     it('should return null on select when unselecting user', () => {
@@ -65,7 +61,7 @@ describe('AppsState', () => {
 
         appsState.select(null).subscribe(x => {
             selectedApp = x!;
-        }).unsubscribe();
+        });
 
         expect(selectedApp!).toBeNull();
         expect(appsState.snapshot.selectedApp).toBeNull();
@@ -76,41 +72,89 @@ describe('AppsState', () => {
 
         appsState.select('unknown').subscribe(x => {
             selectedApp = x!;
-        }).unsubscribe();
+        });
 
         expect(selectedApp!).toBeNull();
         expect(appsState.snapshot.selectedApp).toBeNull();
     });
 
     it('should add app to snapshot when created', () => {
-        const request = new CreateAppDto(newApp.name);
+        const updated = createApp(3, '_new');
+
+        const request = { ...updated };
 
         appsService.setup(x => x.postApp(request))
-            .returns(() => of(newApp));
+            .returns(() => of(updated)).verifiable();
 
         appsState.create(request).subscribe();
 
-        expect(appsState.snapshot.apps.values).toEqual([newApp, ...oldApps]);
+        expect(appsState.snapshot.apps).toEqual([app1, app2, updated]);
     });
 
-    it('should remove app from snashot when archived', () => {
-        const request = new CreateAppDto(newApp.name);
+    it('should update app in snapshot when updated', () => {
+        const updated = createApp(2, '_new');
 
-        appsService.setup(x => x.postApp(request))
-            .returns(() => of(newApp));
+        appsService.setup(x => x.putApp(app2, {}, app2.version))
+            .returns(() => of(updated)).verifiable();
 
-        appsService.setup(x => x.deleteApp(newApp.name))
-            .returns(() => of({}));
+        appsState.update(app2, {}).subscribe();
 
-        appsState.create(request).subscribe();
+        expect(appsState.snapshot.apps).toEqual([app1, updated]);
+    });
 
-        const appsAfterCreate = appsState.snapshot.apps.values;
+    it('should update selected app in snapshot when updated', () => {
+        const updated = createApp(1, '_new');
 
-        appsState.delete(newApp.name).subscribe();
+        appsService.setup(x => x.putApp(app1, {}, app1.version))
+            .returns(() => of(updated)).verifiable();
 
-        const appsAfterDelete = appsState.snapshot.apps.values;
+        appsState.select(app1.name).subscribe();
+        appsState.update(app1, {}).subscribe();
 
-        expect(appsAfterCreate).toEqual([newApp, ...oldApps]);
-        expect(appsAfterDelete).toEqual(oldApps);
+        expect(appsState.snapshot.apps).toEqual([updated, app2]);
+        expect(appsState.snapshot.selectedApp).toEqual(updated);
+    });
+
+    it('should update app in snapshot when image uploaded', () => {
+        const updated = createApp(2, '_new');
+
+        const file = <File>{};
+
+        appsService.setup(x => x.postAppImage(app2, file, app2.version))
+            .returns(() => of(50, 60, updated)).verifiable();
+
+        appsState.uploadImage(app2, file).subscribe();
+
+        expect(appsState.snapshot.apps).toEqual([app1, updated]);
+    });
+
+    it('should update app in snapshot when image removed', () => {
+        const updated = createApp(2, '_new');
+
+        appsService.setup(x => x.deleteAppImage(app2, app2.version))
+            .returns(() => of(updated)).verifiable();
+
+        appsState.removeImage(app2).subscribe();
+
+        expect(appsState.snapshot.apps).toEqual([app1, updated]);
+    });
+
+    it('should remove app from snapshot when archived', () => {
+        appsService.setup(x => x.deleteApp(app2))
+            .returns(() => of({})).verifiable();
+
+        appsState.delete(app2).subscribe();
+
+        expect(appsState.snapshot.apps).toEqual([app1]);
+    });
+
+    it('should remove selected app from snapshot when archived', () => {
+        appsService.setup(x => x.deleteApp(app1))
+            .returns(() => of({})).verifiable();
+
+        appsState.select(app1.name).subscribe();
+        appsState.delete(app1).subscribe();
+
+        expect(appsState.snapshot.selectedApp).toBeNull();
     });
 });

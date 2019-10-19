@@ -12,7 +12,7 @@ using Squidex.Web;
 
 namespace Squidex.Areas.OrleansDashboard
 {
-    public static class Startup
+    public static class 1Startup
     {
         public static void ConfigureOrleansDashboard(this IApplicationBuilder app)
         {

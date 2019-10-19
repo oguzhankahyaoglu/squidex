@@ -7,66 +7,85 @@
 
 import { Injectable } from '@angular/core';
 import { combineLatest, Observable } from 'rxjs';
-import { distinctUntilChanged, map, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 
 import {
+    compareStrings,
     DialogService,
-    ImmutableArray,
-    notify,
     Pager,
+    shareSubscribed,
     State
 } from '@app/framework';
 
 import { AssetDto, AssetsService} from './../services/assets.service';
 import { AppsState } from './apps.state';
+import { SavedQuery } from './queries';
+import { encodeQuery, Query } from './query';
 
 interface Snapshot {
+    // All assets tags.
     tags: { [name: string]: number };
+
+    // The selected asset tags.
     tagsSelected: { [name: string]: boolean };
 
-    assets: ImmutableArray<AssetDto>;
-    assetsPager: Pager;
-    assetsQuery?: string;
+    // The current assets.
+    assets: ReadonlyArray<AssetDto>;
 
+    // The pagination information.
+    assetsPager: Pager;
+
+    // The query to filter assets.
+    assetsQuery?: Query;
+
+    // The json of the assets query.
+    assetsQueryJson: string;
+
+    // Indicates if the assets are loaded.
     isLoaded?: boolean;
+
+    // Indicates if the user can create assets.
+    canCreate?: boolean;
 }
 
 @Injectable()
 export class AssetsState extends State<Snapshot> {
+    public tagsUnsorted =
+        this.project(x => x.tags);
+
+    public tagsSelected =
+        this.project(x => x.tagsSelected);
+
     public tags =
-        this.changes.pipe(map(x => x.tags),
-            distinctUntilChanged(), map(x => sort(x)));
+        this.projectFrom(this.tagsUnsorted, x => sort(x));
 
     public tagsNames =
-        this.tags.pipe(
-            distinctUntilChanged(), map(x => x.map(t => t.name)));
+        this.projectFrom(this.tagsUnsorted, x => Object.keys(x));
 
     public selectedTagNames =
-        this.changes.pipe(
-            distinctUntilChanged(), map(x => Object.keys(x.tagsSelected)));
+        this.projectFrom(this.tagsSelected, x => Object.keys(x));
 
     public assets =
-        this.changes.pipe(map(x => x.assets),
-            distinctUntilChanged());
+        this.project(x => x.assets);
 
     public assetsQuery =
-        this.changes.pipe(map(x => x.assetsQuery),
-            distinctUntilChanged());
+        this.project(x => x.assetsQuery);
 
     public assetsPager =
-        this.changes.pipe(map(x => x.assetsPager),
-            distinctUntilChanged());
+        this.project(x => x.assetsPager);
 
     public isLoaded =
-        this.changes.pipe(map(x => !!x.isLoaded),
-            distinctUntilChanged());
+        this.project(x => x.isLoaded === true);
+
+    public canCreate =
+        this.project(x => x.canCreate === true);
 
     constructor(
         private readonly appsState: AppsState,
         private readonly assetsService: AssetsService,
         private readonly dialogs: DialogService
     ) {
-        super({ assets: ImmutableArray.empty(), assetsPager: new Pager(0, 0, 30), tags: {}, tagsSelected: {} });
+        super({ assets: [], assetsPager: new Pager(0, 0, 30), assetsQueryJson: '', tags: {}, tagsSelected: {} });
     }
 
     public load(isReload = false): Observable<any> {
@@ -86,24 +105,23 @@ export class AssetsState extends State<Snapshot> {
                 Object.keys(this.snapshot.tagsSelected)),
             this.assetsService.getTags(this.appName)
         ).pipe(
-            tap(dtos => {
+            tap(([ { items: assets, total, canCreate }, tags ]) => {
                 if (isReload) {
                     this.dialogs.notifyInfo('Assets reloaded.');
                 }
 
                 this.next(s => {
-                    const assets = ImmutableArray.of(dtos[0].items);
-                    const assetsPager = s.assetsPager.setCount(dtos[0].total);
+                    const assetsPager = s.assetsPager.setCount(total);
 
-                    return { ...s, assets, assetsPager, isLoaded: true, tags: dtos[1] };
+                    return { ...s, assets, assetsPager, isLoaded: true, tags, canCreate };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
     public add(asset: AssetDto) {
         this.next(s => {
-            const assets = s.assets.pushFront(asset);
+            const assets = [asset, ...s.assets];
             const assetsPager = s.assetsPager.incrementCount();
 
             const tags = { ...s.tags };
@@ -115,7 +133,7 @@ export class AssetsState extends State<Snapshot> {
     }
 
     public delete(asset: AssetDto): Observable<any> {
-        return this.assetsService.deleteAsset(this.appName, asset.id, asset.version).pipe(
+        return this.assetsService.deleteAsset(this.appName, asset, asset.version).pipe(
             tap(() => {
                 return this.next(s => {
                     const assets = s.assets.filter(x => x.id !== asset.id);
@@ -129,7 +147,7 @@ export class AssetsState extends State<Snapshot> {
                     return { ...s, assets, assetsPager, tags, tagsSelected };
                 });
             }),
-            notify(this.dialogs));
+            shareSubscribed(this.dialogs));
     }
 
     public update(asset: AssetDto) {
@@ -169,11 +187,11 @@ export class AssetsState extends State<Snapshot> {
         return this.loadInternal();
     }
 
-    public selectTags(tags: string[]): Observable<any> {
+    public selectTags(tags: ReadonlyArray<string>): Observable<any> {
         this.next(s => {
             const tagsSelected = {};
 
-            for (let tag of tags) {
+            for (const tag of tags) {
                 tagsSelected[tag] = true;
             }
 
@@ -189,8 +207,8 @@ export class AssetsState extends State<Snapshot> {
         return this.loadInternal();
     }
 
-    public search(query: string): Observable<any> {
-        this.next(s => ({ ...s, assetsPager: new Pager(0, 0, 30), assetsQuery: query }));
+    public search(query?: Query): Observable<any> {
+        this.next(s => ({ ...s, assetsPager: new Pager(0, 0, 30), assetsQuery: query, assetsQueryJson: encodeQuery(query) }));
 
         return this.loadInternal();
     }
@@ -207,6 +225,10 @@ export class AssetsState extends State<Snapshot> {
         return this.loadInternal();
     }
 
+    public isQueryUsed(saved: SavedQuery) {
+        return this.snapshot.assetsQueryJson === saved.queryJson;
+    }
+
     public isTagSelected(tag: string) {
         return this.snapshot.tagsSelected[tag];
     }
@@ -221,7 +243,7 @@ export class AssetsState extends State<Snapshot> {
 }
 
 function addTags(asset: AssetDto, tags: { [x: string]: number; }) {
-    for (let tag of asset.tags) {
+    for (const tag of asset.tags) {
         if (tags[tag]) {
             tags[tag]++;
         } else {
@@ -231,7 +253,7 @@ function addTags(asset: AssetDto, tags: { [x: string]: number; }) {
 }
 
 function removeTags(previous: AssetDto, tags: { [x: string]: number; }, tagsSelected: { [x: string]: boolean; }) {
-    for (let tag of previous.tags) {
+    for (const tag of previous.tags) {
         if (tags[tag] === 1) {
             delete tags[tag];
             delete tagsSelected[tag];
@@ -242,17 +264,7 @@ function removeTags(previous: AssetDto, tags: { [x: string]: number; }, tagsSele
 }
 
 function sort(tags: { [name: string]: number }) {
-    return Object.keys(tags).sort((a, b) => {
-        if (a < b) {
-            return -1;
-        }
-        if (a > b) {
-            return 1;
-        }
-        return 0;
-    }).map(key => {
-        return { name: key, count: tags[key] };
-    });
+    return Object.keys(tags).sort(compareStrings).map(name => ({ name, count: tags[name] }));
 }
 
 @Injectable()

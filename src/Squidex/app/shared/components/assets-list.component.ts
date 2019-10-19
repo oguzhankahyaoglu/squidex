@@ -5,13 +5,13 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
     AssetDto,
     AssetsState,
-    ImmutableArray
+    getFiles
 } from '@app/shared/internal';
 
 @Component({
@@ -21,7 +21,8 @@ import {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssetsListComponent {
-    public newFiles = ImmutableArray.empty<File>();
+    @Output()
+    public select = new EventEmitter<AssetDto>();
 
     @Input()
     public state: AssetsState;
@@ -35,13 +36,25 @@ export class AssetsListComponent {
     @Input()
     public selectedIds: object;
 
-    @Output()
-    public select = new EventEmitter<AssetDto>();
+    public newFiles: ReadonlyArray<File> = [];
+
+    constructor(
+        private readonly changeDetector: ChangeDetectorRef
+    ) {
+    }
 
     public add(file: File, asset: AssetDto) {
-        this.newFiles = this.newFiles.remove(file);
+        if (asset.isDuplicate) {
+            setTimeout(() => {
+                this.newFiles = this.newFiles.removed(file);
 
-        this.state.add(asset);
+                this.changeDetector.detectChanges();
+            }, 2000);
+        } else {
+            this.newFiles = this.newFiles.removed(file);
+
+            this.state.add(asset);
+        }
     }
 
     public search() {
@@ -73,13 +86,11 @@ export class AssetsListComponent {
     }
 
     public remove(file: File) {
-        this.newFiles = this.newFiles.remove(file);
+        this.newFiles = this.newFiles.removed(file);
     }
 
-    public addFiles(files: File[]) {
-        for (let file of files) {
-            this.newFiles = this.newFiles.pushFront(file);
-        }
+    public addFiles(files: ReadonlyArray<File>) {
+        this.newFiles = [...getFiles(files), ...this.newFiles];
 
         return true;
     }
@@ -88,4 +99,3 @@ export class AssetsListComponent {
         return asset.id;
     }
 }
-

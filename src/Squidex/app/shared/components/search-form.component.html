@@ -3,79 +3,70 @@
 </ng-container>
 
 <form [class]="formClass" (ngSubmit)="search()">
-    <input class="form-control form-control-expandable" #inputFind [formControl]="contentsFilter" [placeholder]="placeholder" />
+    <input class="form-control form-control-expandable" #inputFind
+        [ngModel]="query?.fullText"
+        (ngModelChange)="changeQueryFullText($event)"
+        [ngModelOptions]="standalone"
+        [placeholder]="placeholder" />
 
-    <ng-container *ngIf="expandable">
-        <a class="expand-search" (click)="searchModal.toggle()" #expand>
-            <i class="icon-caret-down"></i>
-        </a>
-
-        <sqx-onboarding-tooltip helpId="contentArchive" [for]="expand" position="bottom-right" after="60000">
-            Click this icon to show the advanced search menu and to show the archive!
-        </sqx-onboarding-tooltip>
-    </ng-container>
-
-    <ng-container *ngIf="queries">
-        <ng-container *ngIf="saveKey | async; else notBookmarked; let key">
-            <a class="save-search" (click)="queries.remove(key)">
-                <i class="icon-star-full"></i>
-            </a>
+    <div class="buttons">
+        <ng-container *ngIf="queries">
+            <ng-container *ngIf="saveKey | async; else notBookmarked; let key">
+                <a class="save-search" (click)="queries.remove(key)">
+                    <i class="icon-star-full"></i>
+                </a>
+            </ng-container>
+        
+            <ng-template #notBookmarked>
+                <a class="save-search" (click)="saveQuery()">
+                    <i class="icon-star-empty"></i>
+                </a>
+            </ng-template>
         </ng-container>
-    
-        <ng-template #notBookmarked>
-            <a class="save-search" (click)="saveQuery()" *ngIf="contentsFilterValue | async">
-                <i class="icon-star-empty"></i>
+
+        <ng-container *ngIf="queryModel">
+            <a class="expand-search" (click)="searchDialog.toggle()" [class.highlighted]="hasFilter" #expand>
+                <i class="icon-filter-filled"></i>
             </a>
-        </ng-template>
-    </ng-container>
+    
+            <sqx-onboarding-tooltip helpId="contentArchive" [for]="expand" position="bottom-right" after="60000">
+                Click this icon to show the advanced search menu!
+            </sqx-onboarding-tooltip>
+        </ng-container>
+    </div>
 </form>
 
 <sqx-onboarding-tooltip helpId="contentFind" [for]="inputFind" position="bottom-right" after="120000">
     Search for content using full text search over all fields and languages!
 </sqx-onboarding-tooltip>
 
-<div class="dropdown-menu" *sqxModalView="searchModal;onRoot:true" [sqxModalTarget]="inputFind">
-    <div class="form-horizontal">
-        <div [formGroup]="searchForm">
-            <div class="form-group row">
-                <label class="col-2 col-form-label" for="search">Text</label>
+<ng-container *sqxModal="searchDialog;closeAuto:false">
+    <div class="dropdown-menu" [sqxAnchoredTo]="inputFind" @fade>
+        <div class="form-horizontal">
+            <div class="submit">
+                <button type="button" class="btn btn-primary mr-2" (click)="search(true)">
+                    Submit
+                </button>
 
-                <div class="col-10">
-                    <input type="text" class="form-control" id="search" (blur)="updateQuery()" formControlName="odataSearch" placeholder="Fulltext search" />
-                </div>
+                <button type="button" class="btn btn-text-secondary" (click)="searchDialog.hide()">
+                    <i class="icon-close"></i>
+                </button>
             </div>
+            <sqx-query
+                [model]="queryModel" 
+                [query]="query"
+                (queryChange)="changeQuery($event)"
+                [language]="language">
+            </sqx-query>
 
-            <div class="form-group row">
-                <label class="col-2 col-form-label" for="filter">Filter</label>
-
-                <div class="col-10">
-                    <input type="text" class="form-control" id="filter" (blur)="updateQuery()" formControlName="odataFilter" placeholder="{{fieldExample}} eq [VALUE]" />
-                </div>
-            </div>
-
-            <div class="form-group row">
-                <label class="col-2 col-form-label" for="orderBy">Order</label>
-                    
-                <div class="col-10">
-                    <input type="text" class="form-control" id="orderBy" (blur)="updateQuery()" formControlName="odataOrderBy" placeholder="{{fieldExample}} desc" />
-                </div>
+            <div class="link">
+                Read more about filtering in the <a href="https://docs.squidex.io/04-guides/02-api.html" sqxExternalLink>Documentation</a>.
             </div>
         </div>
-        
-        <div class="form-check" *ngIf="enableArchive">
-            <input class="form-check-input" type="checkbox" id="archivedItems" [ngModel]="archived" (ngModelChange)="archivedChange.emit($event)" />
-            <label class="form-check-label" for="archivedItems">
-                Archived items
-            </label>
-        </div>
+    </div>        
+</ng-container>
 
-        <div class="link">
-            Read more about filtering in the <a href="https://docs.squidex.io/04-guides/02-api.html" sqxExternalLink>Documentation</a>.
-        </div>
-    </div>
-</div>
-
-<ng-container *sqxModalView="saveQueryDialog;onRoot:true">
+<ng-container *sqxModal="saveQueryDialog">
     <form [formGroup]="saveQueryForm.form" (ngSubmit)="saveQueryComplete()">
         <sqx-modal-dialog (close)="saveQueryDialog.hide()">
             <ng-container title>
@@ -87,6 +78,13 @@
                     <sqx-control-errors for="name" submitOnly="true" [submitted]="saveQueryForm.submitted | async"></sqx-control-errors>
             
                     <input type="text" class="form-control" id="appName" formControlName="name" autocomplete="off" sqxFocusOnInit />
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="user" id="user" />
+                    <label class="form-check-label" for="user">
+                        Save the query only for myself.
+                    </label>
                 </div>
             </ng-container>
         

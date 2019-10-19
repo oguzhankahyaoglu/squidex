@@ -15,34 +15,38 @@ using Squidex.Infrastructure.States;
 
 namespace Squidex.Domain.Apps.Entities.Apps
 {
-    public sealed class AppUISettingsGrain : GrainOfGuid<AppUISettingsGrain.GrainState>, IAppUISettingsGrain
+    public sealed class AppUISettingsGrain : GrainOfString, IAppUISettingsGrain
     {
+        private readonly IGrainState<GrainState> state;
+
         [CollectionName("UISettings")]
         public sealed class GrainState
         {
             public JsonObject Settings { get; set; } = JsonValue.Object();
         }
 
-        public AppUISettingsGrain(IStore<Guid> store)
-            : base(store)
+        public AppUISettingsGrain(IGrainState<GrainState> state)
         {
+            Guard.NotNull(state, nameof(state));
+
+            this.state = state;
         }
 
         public Task<J<JsonObject>> GetAsync()
         {
-            return Task.FromResult(State.Settings.AsJ());
+            return Task.FromResult(state.Value.Settings.AsJ());
         }
 
         public Task SetAsync(J<JsonObject> settings)
         {
-            State.Settings = settings;
+            state.Value.Settings = settings;
 
-            return WriteStateAsync();
+            return state.WriteAsync();
         }
 
         public Task SetAsync(string path, J<IJsonValue> value)
         {
-            var container = GetContainer(path, out var key);
+            var container = GetContainer(path, true, out var key);
 
             if (container == null)
             {
@@ -51,22 +55,22 @@ namespace Squidex.Domain.Apps.Entities.Apps
 
             container[key] = value.Value;
 
-            return WriteStateAsync();
+            return state.WriteAsync();
         }
 
-        public Task RemoveAsync(string path)
+        public async Task RemoveAsync(string path)
         {
-            var container = GetContainer(path, out var key);
+            var container = GetContainer(path, false, out var key);
 
-            if (container != null)
+            if (container?.ContainsKey(key) == true)
             {
                 container.Remove(key);
-            }
 
-            return WriteStateAsync();
+                await state.WriteAsync();
+            }
         }
 
-        private JsonObject GetContainer(string path, out string key)
+        private JsonObject GetContainer(string path, bool add, out string key)
         {
             Guard.NotNullOrEmpty(path, nameof(path));
 
@@ -74,7 +78,7 @@ namespace Squidex.Domain.Apps.Entities.Apps
 
             key = segments[segments.Length - 1];
 
-            var current = State.Settings;
+            var current = state.Value.Settings;
 
             if (segments.Length > 1)
             {
@@ -82,9 +86,16 @@ namespace Squidex.Domain.Apps.Entities.Apps
                 {
                     if (!current.TryGetValue(segment, out var temp))
                     {
-                        temp = JsonValue.Object();
+                        if (add)
+                        {
+                            temp = JsonValue.Object();
 
-                        current[segment] = temp;
+                            current[segment] = temp;
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
 
                     if (temp is JsonObject next)

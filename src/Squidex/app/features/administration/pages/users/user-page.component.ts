@@ -11,8 +11,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { ResourceOwner } from '@app/shared';
 
-import { UserDto } from './../../services/users.service';
-import { UserForm, UsersState } from './../../state/users.state';
+import {
+    CreateUserDto,
+    UserDto,
+    UserForm,
+    UsersState
+} from '@app/features/administration/internal';
 
 @Component({
     selector: 'sqx-user-page',
@@ -20,9 +24,9 @@ import { UserForm, UsersState } from './../../state/users.state';
     templateUrl: './user-page.component.html'
 })
 export class UserPageComponent extends ResourceOwner implements OnInit {
-    public canUpdate = false;
+    public isEditable = true;
 
-    public user?: { user: UserDto, isCurrentUser: boolean };
+    public user?: UserDto;
     public userForm = new UserForm(this.formBuilder);
 
     constructor(
@@ -38,27 +42,34 @@ export class UserPageComponent extends ResourceOwner implements OnInit {
         this.own(
             this.usersState.selectedUser
                 .subscribe(selectedUser => {
-                    this.user = selectedUser!;
-
                     if (selectedUser) {
-                        this.userForm.load(selectedUser.user);
+                        this.user = selectedUser;
+
+                        this.isEditable = this.user.canUpdate;
+
+                        this.userForm.load(selectedUser);
+                        this.userForm.setEnabled(this.isEditable);
                     }
                 }));
     }
 
     public save() {
+        if (!this.isEditable) {
+            return;
+        }
+
         const value = this.userForm.submit();
 
         if (value) {
             if (this.user) {
-                this.usersState.update(this.user.user, value)
-                    .subscribe(() => {
-                        this.userForm.submitCompleted();
+                this.usersState.update(this.user, value)
+                    .subscribe(user => {
+                        this.userForm.submitCompleted({ newValue: user });
                     }, error => {
                         this.userForm.submitFailed(error);
                     });
             } else {
-                this.usersState.create(value)
+                this.usersState.create(<CreateUserDto>value)
                     .subscribe(() => {
                         this.back();
                     }, error => {

@@ -9,28 +9,27 @@ import { of } from 'rxjs';
 import { IMock, It, Mock, Times } from 'typemoq';
 
 import {
-    AppsState,
-    DateTime,
-    DialogService
-} from '@app/shared';
-
-import { RuleEventsState } from './rule-events.state';
-
-import {
-    RuleEventDto,
+    DialogService,
     RuleEventsDto,
+    RuleEventsState,
     RulesService
-} from './../services/rules.service';
+} from '@app/shared/internal';
+
+import { createRuleEvent } from '../services/rules.service.spec';
+
+import { TestValues } from './_test-helpers';
 
 describe('RuleEventsState', () => {
-    const app = 'my-app';
+    const {
+        app,
+        appsState
+    } = TestValues;
 
     const oldRuleEvents = [
-        new RuleEventDto('id1', DateTime.now(), null, 'event1', 'description', 'dump1', 'result1', 'result1', 1),
-        new RuleEventDto('id2', DateTime.now(), null, 'event2', 'description', 'dump2', 'result2', 'result2', 2)
+         createRuleEvent(1),
+         createRuleEvent(2)
     ];
 
-    let appsState: IMock<AppsState>;
     let dialogs: IMock<DialogService>;
     let rulesService: IMock<RulesService>;
     let ruleEventsState: RuleEventsState;
@@ -38,14 +37,9 @@ describe('RuleEventsState', () => {
     beforeEach(() => {
         dialogs = Mock.ofType<DialogService>();
 
-        appsState = Mock.ofType<AppsState>();
-
-        appsState.setup(x => x.appName)
-            .returns(() => app);
-
         rulesService = Mock.ofType<RulesService>();
 
-        rulesService.setup(x => x.getEvents(app, 10, 0))
+        rulesService.setup(x => x.getEvents(app, 10, 0, undefined))
             .returns(() => of(new RuleEventsDto(200, oldRuleEvents)));
 
         ruleEventsState = new RuleEventsState(appsState.object, dialogs.object, rulesService.object);
@@ -53,7 +47,7 @@ describe('RuleEventsState', () => {
     });
 
     it('should load ruleEvents', () => {
-        expect(ruleEventsState.snapshot.ruleEvents.values).toEqual(oldRuleEvents);
+        expect(ruleEventsState.snapshot.ruleEvents).toEqual(oldRuleEvents);
         expect(ruleEventsState.snapshot.ruleEventsPager.numberOfItems).toEqual(200);
         expect(ruleEventsState.snapshot.isLoaded).toBeTruthy();
 
@@ -69,7 +63,7 @@ describe('RuleEventsState', () => {
     });
 
     it('should load next page and prev page when paging', () => {
-        rulesService.setup(x => x.getEvents(app, 10, 10))
+        rulesService.setup(x => x.getEvents(app, 10, 10, undefined))
             .returns(() => of(new RuleEventsDto(200, [])));
 
         ruleEventsState.goNext().subscribe();
@@ -77,29 +71,40 @@ describe('RuleEventsState', () => {
 
         expect().nothing();
 
-        rulesService.verify(x => x.getEvents(app, 10, 10), Times.once());
-        rulesService.verify(x => x.getEvents(app, 10, 0), Times.exactly(2));
+        rulesService.verify(x => x.getEvents(app, 10, 10, undefined), Times.once());
+        rulesService.verify(x => x.getEvents(app, 10, 0, undefined), Times.exactly(2));
+    });
+
+    it('should load with rule id when filtered', () => {
+        rulesService.setup(x => x.getEvents(app, 10, 0, '12'))
+            .returns(() => of(new RuleEventsDto(200, [])));
+
+        ruleEventsState.filterByRule('12').subscribe();
+
+        expect().nothing();
+
+        rulesService.verify(x => x.getEvents(app, 10, 0, '12'), Times.exactly(1));
     });
 
     it('should call service when enqueuing event', () => {
-        rulesService.setup(x => x.enqueueEvent(app, oldRuleEvents[0].id))
+        rulesService.setup(x => x.enqueueEvent(app, oldRuleEvents[0]))
             .returns(() => of({}));
 
         ruleEventsState.enqueue(oldRuleEvents[0]).subscribe();
 
         expect().nothing();
 
-        rulesService.verify(x => x.enqueueEvent(app, oldRuleEvents[0].id), Times.once());
+        rulesService.verify(x => x.enqueueEvent(app, oldRuleEvents[0]), Times.once());
     });
 
     it('should call service when cancelling event', () => {
-        rulesService.setup(x => x.cancelEvent(app, oldRuleEvents[0].id))
+        rulesService.setup(x => x.cancelEvent(app, oldRuleEvents[0]))
             .returns(() => of({}));
 
         ruleEventsState.cancel(oldRuleEvents[0]).subscribe();
 
         expect().nothing();
 
-        rulesService.verify(x => x.cancelEvent(app, oldRuleEvents[0].id), Times.once());
+        rulesService.verify(x => x.cancelEvent(app, oldRuleEvents[0]), Times.once());
     });
 });

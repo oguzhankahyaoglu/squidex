@@ -14,21 +14,45 @@ import {
     AnalyticsService,
     ApiUrlConfig,
     DateTime,
-    Model,
+    hasAnyLink,
     pretifyError,
+    Resource,
+    ResourceLinks,
+    ResultSet,
     Types
 } from '@app/framework';
 
-export class BackupDto extends Model {
+export class BackupsDto extends ResultSet<BackupDto> {
+    public get canCreate() {
+        return hasAnyLink(this._links, 'create');
+    }
+}
+
+export class BackupDto {
+    public readonly _links: ResourceLinks;
+
+    public readonly canDelete: boolean;
+
+    public readonly downloadUrl: string;
+
+    public get isFailed() {
+        return this.status === 'Failed';
+    }
+
     constructor(
+        links: ResourceLinks,
         public readonly id: string,
         public readonly started: DateTime,
         public readonly stopped: DateTime | null,
         public readonly handledEvents: number,
         public readonly handledAssets: number,
-        public readonly status: string
+        public readonly status: 'Started' | 'Failed' | 'Success' | 'Completed' | 'Pending'
     ) {
-        super();
+        this._links = links;
+
+        this.canDelete = hasAnyLink(links, 'delete');
+
+        this.downloadUrl = links['download'].href;
     }
 }
 
@@ -38,17 +62,14 @@ export class RestoreDto {
         public readonly started: DateTime,
         public readonly stopped: DateTime | null,
         public readonly status: string,
-        public readonly log: string[]
+        public readonly log: ReadonlyArray<string>
     ) {
     }
 }
 
-export class StartRestoreDto {
-    constructor(
-        public readonly url: string,
-        public readonly newAppName?: string
-    ) {
-    }
+export interface StartRestoreDto {
+    readonly url: string;
+    readonly newAppName?: string;
 }
 
 @Injectable()
@@ -60,73 +81,85 @@ export class BackupsService {
     ) {
     }
 
-    public getBackups(appName: string): Observable<BackupDto[]> {
+    public getBackups(appName: string): Observable<BackupsDto> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/backups`);
 
-        return this.http.get<any[]>(url).pipe(
-                map(response => {
-                    return response.map(item => {
-                        return new BackupDto(
-                            item.id,
-                            DateTime.parseISO_UTC(item.started),
-                            item.stopped ? DateTime.parseISO_UTC(item.stopped) : null,
-                            item.handledEvents,
-                            item.handledAssets,
-                            item.status);
-                    });
-                }),
-                pretifyError('Failed to load backups.'));
+        return this.http.get<{ items: any[], _links: {} } & Resource>(url).pipe(
+            map(({ items, _links }) => {
+                const backups = items.map(item => parseBackup(item));
+
+                return new BackupsDto(backups.length, backups, _links);
+            }),
+            pretifyError('Failed to load backups.'));
     }
 
     public getRestore(): Observable<RestoreDto | null> {
         const url = this.apiUrl.buildUrl(`api/apps/restore`);
 
-        return this.http.get<any>(url).pipe(
-                map(response => {
-                    return new RestoreDto(
-                        response.url,
-                        DateTime.parseISO_UTC(response.started),
-                        response.stopped ? DateTime.parseISO_UTC(response.stopped) : null,
-                        response.status,
-                        response.log);
-                }),
-                catchError(error => {
-                    if (Types.is(error, HttpErrorResponse) && error.status === 404) {
-                        return of(null);
-                    } else {
-                        return throwError(error);
-                    }
-                }),
-                pretifyError('Failed to load backups.'));
+        return this.http.get(url).pipe(
+            map(body => {
+                const restore = parseRestore(body);
+
+                return restore;
+            }),
+            catchError(error => {
+                if (Types.is(error, HttpErrorResponse) && error.status === 404) {
+                    return of(null);
+                } else {
+                    return throwError(error);
+                }
+            }),
+            pretifyError('Failed to load backups.'));
     }
 
     public postBackup(appName: string): Observable<any> {
         const url = this.apiUrl.buildUrl(`api/apps/${appName}/backups`);
 
         return this.http.post(url, {}).pipe(
-                tap(() => {
-                    this.analytics.trackEvent('Backup', 'Started', appName);
-                }),
-                pretifyError('Failed to start backup.'));
+            tap(() => {
+                this.analytics.trackEvent('Backup', 'Started', appName);
+            }),
+            pretifyError('Failed to start backup.'));
     }
 
     public postRestore(dto: StartRestoreDto): Observable<any> {
         const url = this.apiUrl.buildUrl(`api/apps/restore`);
 
         return this.http.post(url, dto).pipe(
-                tap(() => {
-                    this.analytics.trackEvent('Restore', 'Started');
-                }),
-                pretifyError('Failed to start restore.'));
+            tap(() => {
+                this.analytics.trackEvent('Restore', 'Started');
+            }),
+            pretifyError('Failed to start restore.'));
     }
 
-    public deleteBackup(appName: string, id: string): Observable<any> {
-        const url = this.apiUrl.buildUrl(`api/apps/${appName}/backups/${id}`);
+    public deleteBackup(appName: string, resource: Resource): Observable<any> {
+        const link = resource._links['delete'];
 
-        return this.http.delete(url).pipe(
-                tap(() => {
-                    this.analytics.trackEvent('Backup', 'Deleted', appName);
-                }),
-                pretifyError('Failed to delete backup.'));
+        const url = this.apiUrl.buildUrl(link.href);
+
+        return this.http.request(link.method, url).pipe(
+            tap(() => {
+                this.analytics.trackEvent('Backup', 'Deleted', appName);
+            }),
+            pretifyError('Failed to delete backup.'));
     }
+}
+
+function parseRestore(response: any) {
+    return new RestoreDto(
+        response.url,
+        DateTime.parseISO_UTC(response.started),
+        response.stopped ? DateTime.parseISO_UTC(response.stopped) : null,
+        response.status,
+        response.log);
+}
+
+function parseBackup(response: any) {
+    return new BackupDto(response._links,
+        response.id,
+        DateTime.parseISO_UTC(response.started),
+        response.stopped ? DateTime.parseISO_UTC(response.stopped) : null,
+        response.handledEvents,
+        response.handledAssets,
+        response.status);
 }

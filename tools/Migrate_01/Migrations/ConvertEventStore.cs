@@ -49,18 +49,18 @@ namespace Migrate_01.Migrations
                     }
                 }
 
-                await collection.Find(new BsonDocument()).ForEachAsync(async commit =>
-                {
-                    foreach (BsonDocument @event in commit["Events"].AsBsonArray)
-                    {
-                        var meta = JObject.Parse(@event["Metadata"].AsString);
+                await collection.Find(new BsonDocument()).ForEachAsync(processor: async commit =>
+                 {
+                     foreach (BsonDocument @event in commit["Events"].AsBsonArray)
+                     {
+                         var meta = JObject.Parse(@event["Metadata"].AsString);
 
-                        @event.Remove("EventId");
-                        @event["Metadata"] = meta.ToBson();
-                    }
+                         @event.Remove("EventId");
+                         @event["Metadata"] = meta.ToBson();
+                     }
 
-                    await WriteAsync(new ReplaceOneModel<BsonDocument>(filter.Eq("_id", commit["_id"].AsString), commit), false);
-                });
+                     await WriteAsync(new ReplaceOneModel<BsonDocument>(filter.Eq("_id", commit["_id"].AsString), commit), false);
+                 });
 
                 await WriteAsync(null, true);
             }

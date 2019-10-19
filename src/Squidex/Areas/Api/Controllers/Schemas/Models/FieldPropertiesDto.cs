@@ -6,16 +6,17 @@
 // ==========================================================================
 
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Squidex.Domain.Apps.Core.Schemas;
-using Squidex.Web;
+using Squidex.Web.Json;
 
 namespace Squidex.Areas.Api.Controllers.Schemas.Models
 {
-    [JsonConverter(typeof(MyJsonInheritanceConverter<FieldPropertiesDto>), "fieldType")]
+    [JsonConverter(typeof(TypedJsonInheritanceConverter<FieldPropertiesDto>), "fieldType")]
     [KnownType(nameof(Subtypes))]
     public abstract class FieldPropertiesDto
     {
@@ -48,14 +49,19 @@ namespace Squidex.Areas.Api.Controllers.Schemas.Models
         public bool IsListField { get; set; }
 
         /// <summary>
+        /// Determines if the field should be displayed in reference lists.
+        /// </summary>
+        public bool IsReferenceField { get; set; }
+
+        /// <summary>
         /// Optional url to the editor.
         /// </summary>
         public string EditorUrl { get; set; }
 
         /// <summary>
-        /// Gets the partitioning of the language, e.g. invariant or language.
+        /// Tags for automation processes.
         /// </summary>
-        public string Partitioning { get; set; }
+        public ReadOnlyCollection<string> Tags { get; set; }
 
         public abstract FieldProperties ToProperties();
 

@@ -6,6 +6,7 @@
 // ==========================================================================
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Squidex.Infrastructure;
 
@@ -13,8 +14,10 @@ namespace Squidex.Domain.Apps.Entities.Assets
 {
     public interface IAssetQueryService
     {
-        Task<IResultList<IAssetEntity>> QueryAsync(QueryContext contex, Q query);
+        Task<IReadOnlyList<IEnrichedAssetEntity>> QueryByHashAsync(Context context, Guid appId, string hash);
 
-        Task<IAssetEntity> FindAssetAsync(QueryContext context, Guid id);
+        Task<IResultList<IEnrichedAssetEntity>> QueryAsync(Context context, Q query);
+
+        Task<IEnrichedAssetEntity> FindAssetAsync(Context context, Guid id);
     }
 }

@@ -5,43 +5,66 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpEvent, HttpHeaders, HttpRequest, HttpResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-import { ErrorDto } from './../../utils/error';
-import { Types} from './../../utils/types';
-import { Version, Versioned } from './../../utils/version';
+import {
+    ErrorDto,
+    Types,
+    Version,
+    Versioned
+} from '@app/framework/internal';
 
 export module HTTP {
-    export function getVersioned<T>(http: HttpClient, url: string, version?: Version): Observable<Versioned<HttpResponse<T>>> {
+    export function upload<T = any>(http: HttpClient, method: string, url: string, file: File, version?: Version): Observable<HttpEvent<T>> {
+        const req = new HttpRequest(method, url, getFormData(file), { headers: createHeaders(version), reportProgress: true });
+
+        return http.request<T>(req);
+    }
+
+    export function getVersioned<T = any>(http: HttpClient, url: string, version?: Version): Observable<Versioned<HttpResponse<T>>> {
         const headers = createHeaders(version);
 
         return handleVersion(http.get<T>(url, { observe: 'response', headers }));
     }
 
-    export function postVersioned<T>(http: HttpClient, url: string, body: any, version?: Version): Observable<Versioned<HttpResponse<T>>> {
+    export function postVersioned<T = any>(http: HttpClient, url: string, body: any, version?: Version): Observable<Versioned<HttpResponse<T>>> {
         const headers = createHeaders(version);
 
         return handleVersion(http.post<T>(url, body, { observe: 'response', headers }));
     }
 
-    export function putVersioned<T>(http: HttpClient, url: string, body: any, version?: Version): Observable<Versioned<HttpResponse<T>>> {
+    export function putVersioned<T = any>(http: HttpClient, url: string, body: any, version?: Version): Observable<Versioned<HttpResponse<T>>> {
         const headers = createHeaders(version);
 
         return handleVersion(http.put<T>(url, body, { observe: 'response', headers }));
     }
 
-    export function patchVersioned<T>(http: HttpClient, url: string, body: any, version?: Version): Observable<Versioned<HttpResponse<T>>> {
+    export function patchVersioned<T = any>(http: HttpClient, url: string, body: any, version?: Version): Observable<Versioned<HttpResponse<T>>> {
         const headers = createHeaders(version);
 
         return handleVersion(http.request<T>('PATCH', url, { body, observe: 'response', headers }));
     }
 
-    export function deleteVersioned<T>(http: HttpClient, url: string, version?: Version): Observable<Versioned<HttpResponse<T>>> {
+    export function deleteVersioned<T = any>(http: HttpClient, url: string, version?: Version): Observable<Versioned<HttpResponse<T>>> {
         const headers = createHeaders(version);
 
         return handleVersion(http.delete<T>(url, { observe: 'response', headers }));
+    }
+
+    export function requestVersioned<T = any>(http: HttpClient, method: string, url: string, version?: Version, body?: any): Observable<Versioned<HttpResponse<T>>> {
+        const headers = createHeaders(version);
+
+        return handleVersion(http.request<T>(method, url, { observe: 'response', headers, body }));
+    }
+
+    function getFormData(file: File) {
+        const formData = new FormData();
+
+        formData.append('file', file);
+
+        return formData;
     }
 
     function createHeaders(version?: Version): HttpHeaders {
@@ -56,7 +79,7 @@ export module HTTP {
         return httpRequest.pipe(map((response: HttpResponse<T>) => {
             const etag = response.headers.get('etag') || '';
 
-            return new Versioned(new Version(etag), response);
+            return { version: new Version(etag), payload: response };
         }));
     }
 }
@@ -78,12 +101,12 @@ export const pretifyError = (message: string) => <T>(source: Observable<T>) =>
                 }
 
                 if (response.status === 412) {
-                    result = new ErrorDto(response.status, 'Failed to make the update. Another user has made a change. Please reload.');
+                    result = new ErrorDto(response.status, 'Failed to make the update. Another user has made a change. Please reload.', [], response);
                 } else if (response.status !== 500) {
-                    result = new ErrorDto(response.status, errorDto.message, errorDto.details);
+                    result = new ErrorDto(response.status, errorDto.message, errorDto.details, response);
                 }
             } catch (e) {
-                result = new ErrorDto(500, 'Failed to make the request.');
+                result = new ErrorDto(500, 'Failed to make the request.', [], response);
             }
         }
 

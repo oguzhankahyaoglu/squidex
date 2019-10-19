@@ -16,26 +16,37 @@
     }
 }
 
-.date-group {
-    & {
-        padding-right: .25rem;
+.form-group {
+    position: relative;
+}
+
+.input-group {
+    .form-control {
+        &:last-child {
+            position: relative;
+            padding-right: 2rem;
+        }
     }
 
-    .form-control {
-        width: 7.5rem;
+    .form-date {
+        width: 7rem;
+    }
+
+    .form-date-only {
+        width: 8.5rem;
+    }
+
+    .form-time {
+        width: 7rem;
     }
 }
 
-.time-group {
+.btn-clear {
     & {
-        padding-right: .25rem;
+        @include absolute(auto, 4px, 3px, auto);
     }
 
-    .form-control {
-        width: 7.5rem;
+    &:focus {
+        @include box-shadow-none;
     }
-}
-
-.clear {
-    margin-left: .5rem;
 }

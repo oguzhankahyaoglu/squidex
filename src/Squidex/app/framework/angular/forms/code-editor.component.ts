@@ -11,8 +11,8 @@ import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
 import {
-    ExternalControlComponent,
     ResourceLoaderService,
+    StatefulControlComponent,
     Types
 } from '@app/framework/internal';
 
@@ -29,25 +29,31 @@ export const SQX_CODE_EDITOR_CONTROL_VALUE_ACCESSOR: any = {
     providers: [SQX_CODE_EDITOR_CONTROL_VALUE_ACCESSOR],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CodeEditorComponent extends ExternalControlComponent<string> implements AfterViewInit {
+export class CodeEditorComponent extends StatefulControlComponent<undefined, string> implements AfterViewInit {
     private valueChanged = new Subject();
     private aceEditor: any;
     private value: string;
     private isDisabled = false;
 
-    @ViewChild('editor')
+    @ViewChild('editor', { static: false })
     public editor: ElementRef;
+
+    @Input()
+    public noBorder = false;
 
     @Input()
     public mode = 'ace/mode/javascript';
 
+    @Input()
+    public height = 0;
+
     constructor(changeDetector: ChangeDetectorRef,
         private readonly resourceLoader: ResourceLoaderService
     ) {
-        super(changeDetector);
+        super(changeDetector, undefined);
     }
 
-    public writeValue(obj: any) {
+    public writeValue(obj: string) {
         this.value = Types.isString(obj) ? obj : '';
 
         if (this.aceEditor) {
@@ -64,11 +70,14 @@ export class CodeEditorComponent extends ExternalControlComponent<string> implem
     }
 
     public ngAfterViewInit() {
-        this.valueChanged.pipe(
-                debounceTime(500))
+        this.valueChanged.pipe(debounceTime(500))
             .subscribe(() => {
                 this.changeValue();
             });
+
+        if (this.height) {
+            this.editor.nativeElement.style.height = `${this.height}px`;
+        }
 
         this.resourceLoader.loadScript('https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js').then(() => {
             this.aceEditor = ace.edit(this.editor.nativeElement);
@@ -87,6 +96,8 @@ export class CodeEditorComponent extends ExternalControlComponent<string> implem
             this.aceEditor.on('change', () => {
                 this.valueChanged.next();
             });
+
+            this.detach();
         });
     }
 

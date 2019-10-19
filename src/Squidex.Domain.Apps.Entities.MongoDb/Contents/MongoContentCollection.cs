@@ -68,18 +68,18 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
             return "State_Contents";
         }
 
-        public async Task<IResultList<IContentEntity>> QueryAsync(IAppEntity app, ISchemaEntity schema, Query query, List<Guid> ids, Status[] status, bool useDraft)
+        public async Task<IResultList<IContentEntity>> QueryAsync(ISchemaEntity schema, ClrQuery query, List<Guid> ids, Status[] status, bool inDraft, bool includeDraft = true)
         {
             try
             {
-                query = query.AdjustToModel(schema.SchemaDef, useDraft);
+                query = query.AdjustToModel(schema.SchemaDef, inDraft);
 
                 var filter = query.ToFilter(schema.Id, ids, status);
 
                 var contentCount = Collection.Find(filter).CountDocumentsAsync();
                 var contentItems =
                     Collection.Find(filter)
-                        .WithoutDraft(useDraft)
+                        .WithoutDraft(includeDraft)
                         .ContentTake(query)
                         .ContentSkip(query)
                         .ContentSort(query)
@@ -107,11 +107,11 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
             }
         }
 
-        public async Task<List<(IContentEntity Content, ISchemaEntity Schema)>> QueryAsync(IAppEntity app, HashSet<Guid> ids, Status[] status, bool useDraft)
+        public async Task<List<(IContentEntity Content, ISchemaEntity Schema)>> QueryAsync(IAppEntity app, HashSet<Guid> ids, Status[] status, bool includeDraft)
         {
             var find = Collection.Find(FilterFactory.IdsByApp(app.Id, ids, status));
 
-            var contentItems = await find.WithoutDraft(useDraft).ToListAsync();
+            var contentItems = await find.WithoutDraft(includeDraft).ToListAsync();
 
             var schemaIds = contentItems.Select(x => x.IndexedSchemaId).ToList();
             var schemas = await Task.WhenAll(schemaIds.Select(x => appProvider.GetSchemaAsync(app.Id, x)));
@@ -133,28 +133,25 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
             return result;
         }
 
-        public async Task<IResultList<IContentEntity>> QueryAsync(IAppEntity app, ISchemaEntity schema, HashSet<Guid> ids, Status[] status, bool useDraft)
+        public async Task<IResultList<IContentEntity>> QueryAsync(ISchemaEntity schema, HashSet<Guid> ids, Status[] status, bool includeDraft)
         {
             var find = Collection.Find(FilterFactory.IdsBySchema(schema.Id, ids, status));
 
-            var contentItems = find.WithoutDraft(useDraft).ToListAsync();
-            var contentCount = find.CountDocumentsAsync();
+            var contentItems = await find.WithoutDraft(includeDraft).ToListAsync();
 
-            await Task.WhenAll(contentItems, contentCount);
-
-            foreach (var entity in contentItems.Result)
+            foreach (var entity in contentItems)
             {
                 entity.ParseData(schema.SchemaDef, serializer);
             }
 
-            return ResultList.Create<IContentEntity>(contentCount.Result, contentItems.Result);
+            return ResultList.Create<IContentEntity>(contentItems.Count, contentItems);
         }
 
-        public async Task<IContentEntity> FindContentAsync(IAppEntity app, ISchemaEntity schema, Guid id, Status[] status, bool useDraft)
+        public async Task<IContentEntity> FindContentAsync(ISchemaEntity schema, Guid id, Status[] status, bool includeDraft)
         {
             var find = Collection.Find(FilterFactory.Build(schema.Id, id, status));
 
-            var contentEntity = await find.WithoutDraft(useDraft).FirstOrDefaultAsync();
+            var contentEntity = await find.WithoutDraft(includeDraft).FirstOrDefaultAsync();
 
             contentEntity?.ParseData(schema.SchemaDef, serializer);
 
@@ -172,15 +169,24 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
                 });
         }
 
-        public async Task<IReadOnlyList<Guid>> QueryIdsAsync(Guid appId, ISchemaEntity schema, FilterNode filterNode)
+        public async Task<IReadOnlyList<(Guid SchemaId, Guid Id)>> QueryIdsAsync(ISchemaEntity schema, FilterNode<ClrValue> filterNode)
         {
             var filter = filterNode.AdjustToModel(schema.SchemaDef, true).ToFilter(schema.Id);
 
             var contentEntities =
-                await Collection.Find(filter).Only(x => x.Id)
+                await Collection.Find(filter).Only(x => x.Id, x => x.IndexedSchemaId)
                     .ToListAsync();
 
-            return contentEntities.Select(x => Guid.Parse(x["_id"].AsString)).ToList();
+            return contentEntities.Select(x => (Guid.Parse(x["_si"].AsString), Guid.Parse(x["_id"].AsString))).ToList();
+        }
+
+        public async Task<IReadOnlyList<(Guid SchemaId, Guid Id)>> QueryIdsAsync(HashSet<Guid> ids)
+        {
+            var contentEntities =
+                await Collection.Find(Filter.In(x => x.Id, ids)).Only(x => x.Id, x => x.IndexedSchemaId)
+                    .ToListAsync();
+
+            return contentEntities.Select(x => (Guid.Parse(x["_si"].AsString), Guid.Parse(x["_id"].AsString))).ToList();
         }
 
         public async Task<IReadOnlyList<Guid>> QueryIdsAsync(Guid appId)
@@ -212,7 +218,7 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
 
         public Task ReadAllAsync(Func<ContentState, long, Task> callback, Func<Guid, Guid, Task<ISchemaEntity>> getSchema, CancellationToken ct = default)
         {
-            return Collection.Find(new BsonDocument()).ForEachPipelineAsync(async contentEntity =>
+            return Collection.Find(new BsonDocument(), options: Batching.Options).ForEachPipelineAsync(async contentEntity =>
             {
                 var schema = await getSchema(contentEntity.IndexedAppId, contentEntity.IndexedSchemaId);
 

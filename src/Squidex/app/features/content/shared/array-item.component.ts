@@ -5,17 +5,21 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import { AbstractControl, FormGroup } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { startWith } from 'rxjs/operators';
 
 import {
     AppLanguageDto,
     EditContentForm,
     FieldDto,
+    FieldFormatter,
     invalid$,
     RootFieldDto
 } from '@app/shared';
+
+type FieldControl = { field: FieldDto, control: AbstractControl };
 
 @Component({
     selector: 'sqx-array-item',
@@ -23,7 +27,9 @@ import {
     templateUrl: './array-item.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ArrayItemComponent implements OnChanges {
+export class ArrayItemComponent implements OnChanges, OnDestroy {
+    private subscription: Subscription;
+
     @Output()
     public remove = new EventEmitter();
 
@@ -33,23 +39,23 @@ export class ArrayItemComponent implements OnChanges {
     @Output()
     public clone = new EventEmitter();
 
-    @Output()
-    public toggle = new EventEmitter<boolean>();
-
     @Input()
     public form: EditContentForm;
 
     @Input()
-    public field: RootFieldDto;
+    public formContext: any;
 
     @Input()
-    public isHidden = false;
+    public field: RootFieldDto;
 
     @Input()
     public isFirst = false;
 
     @Input()
     public isLast = false;
+
+    @Input()
+    public isDisabled = false;
 
     @Input()
     public index: number;
@@ -61,24 +67,87 @@ export class ArrayItemComponent implements OnChanges {
     public language: AppLanguageDto;
 
     @Input()
-    public languages: AppLanguageDto[];
+    public languages: ReadonlyArray<AppLanguageDto>;
 
+    public isHidden = false;
     public isInvalid: Observable<boolean>;
 
-    public fieldControls: { field: FieldDto, control: AbstractControl }[];
+    public title: string;
+
+    public fieldControls: ReadonlyArray<FieldControl> = [];
+
+    constructor(
+        private readonly changeDetector: ChangeDetectorRef
+    ) {
+    }
+
+    public ngOnDestroy() {
+        this.unsubscribeFromForm();
+    }
+
+    private unsubscribeFromForm() {
+        if (this.subscription) {
+            this.subscription.unsubscribe();
+        }
+    }
 
     public ngOnChanges(changes: SimpleChanges) {
         if (changes['itemForm']) {
             this.isInvalid = invalid$(this.itemForm);
+
+            this.unsubscribeFromForm();
+
+            this.subscription =
+                this.itemForm.valueChanges.pipe(startWith(this.itemForm.value))
+                    .subscribe(() => {
+                        this.updateTitle();
+                    });
         }
 
         if (changes['itemForm'] || changes['field']) {
-            this.fieldControls = this.field.nested.map(field => ({ field, control: this.itemForm.get(field.name)! })).filter(x => !!x.control);
+            this.updateFields();
+            this.updateTitle();
         }
     }
 
-    public emitToggle(value: boolean) {
-        this.toggle.emit(value);
+    private updateFields() {
+        const fields: FieldControl[] = [];
+
+        for (let field of this.field.nested) {
+            const control = this.itemForm.get(field.name)!;
+
+            if (control || this.field.properties.isContentField) {
+                fields.push({ field, control });
+            }
+        }
+
+        this.fieldControls = fields;
+    }
+
+    private updateTitle() {
+        const values: string[] = [];
+
+        for (let { control, field } of this.fieldControls) {
+            const formatted = FieldFormatter.format(field, control.value);
+
+            if (formatted) {
+                values.push(formatted);
+            }
+        }
+
+        this.title = values.join(', ');
+    }
+
+    public collapse() {
+        this.isHidden = true;
+
+        this.changeDetector.detectChanges();
+    }
+
+    public expand() {
+        this.isHidden = false;
+
+        this.changeDetector.detectChanges();
     }
 
     public emitClone() {

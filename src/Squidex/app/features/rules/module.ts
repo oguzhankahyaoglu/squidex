@@ -18,9 +18,11 @@ import {
     AssetChangedTriggerComponent,
     ContentChangedTriggerComponent,
     GenericActionComponent,
+    RuleComponent,
     RuleElementComponent,
     RuleEventBadgeClassPipe,
     RuleEventsPageComponent,
+    RuleIconComponent,
     RulesPageComponent,
     RuleWizardComponent,
     SchemaChangedTriggerComponent,
@@ -57,13 +59,15 @@ const routes: Routes = [
         AssetChangedTriggerComponent,
         ContentChangedTriggerComponent,
         GenericActionComponent,
+        RuleComponent,
         RuleElementComponent,
         RuleEventBadgeClassPipe,
         RuleEventsPageComponent,
+        RuleIconComponent,
         RulesPageComponent,
         RuleWizardComponent,
         SchemaChangedTriggerComponent,
         UsageTriggerComponent
     ]
 })
-export class SqxFeatureRulesModule { }
+export class SqxFeatureRulesModule {}

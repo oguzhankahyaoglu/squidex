@@ -12,53 +12,53 @@ import { map } from 'rxjs/operators';
 
 import {
     ApiUrlConfig,
-    Model,
-    pretifyError
+    hasAnyLink,
+    pretifyError,
+    Resource,
+    ResourceLinks,
+    ResultSet
 } from '@app/shared';
 
-export class UsersDto extends Model {
-    constructor(
-        public readonly total: number,
-        public readonly items: UserDto[]
-    ) {
-        super();
+export class UsersDto extends ResultSet<UserDto> {
+    public get canCreate() {
+        return hasAnyLink(this._links, 'create');
     }
 }
 
-export class UserDto extends Model {
-    constructor(
+export class UserDto {
+    public readonly _links: ResourceLinks;
+
+    public readonly canLock: boolean;
+    public readonly canUnlock: boolean;
+    public readonly canUpdate: boolean;
+
+    constructor(links: ResourceLinks,
         public readonly id: string,
         public readonly email: string,
         public readonly displayName: string,
-        public readonly permissions: string[],
-        public readonly isLocked: boolean
+        public readonly permissions: ReadonlyArray<string> = [],
+        public readonly isLocked?: boolean
     ) {
-        super();
-    }
+        this._links = links;
 
-    public with(value: Partial<UserDto>): UserDto {
-        return this.clone(value);
+        this.canLock = hasAnyLink(links, 'lock');
+        this.canUnlock = hasAnyLink(links, 'unlock');
+        this.canUpdate = hasAnyLink(links, 'update');
     }
 }
 
-export class CreateUserDto {
-    constructor(
-        public readonly email: string,
-        public readonly displayName: string,
-        public readonly permissions: string[],
-        public readonly password: string
-    ) {
-    }
+export interface CreateUserDto {
+    readonly email: string;
+    readonly displayName: string;
+    readonly permissions: ReadonlyArray<string>;
+    readonly password: string;
 }
 
-export class UpdateUserDto {
-    constructor(
-        public readonly email: string,
-        public readonly displayName: string,
-        public readonly permissions: string[],
-        public readonly password?: string
-    ) {
-    }
+export interface UpdateUserDto {
+    readonly email: string;
+    readonly displayName: string;
+    readonly permissions: ReadonlyArray<string>;
+    readonly password?: string;
 }
 
 @Injectable()
@@ -72,70 +72,78 @@ export class UsersService {
     public getUsers(take: number, skip: number, query?: string): Observable<UsersDto> {
         const url = this.apiUrl.buildUrl(`api/user-management?take=${take}&skip=${skip}&query=${query || ''}`);
 
-        return this.http.get<{ total: number, items: any[] }>(url).pipe(
-                map(response => {
-                    const users = response.items.map(item => {
-                        return new UserDto(
-                            item.id,
-                            item.email,
-                            item.displayName,
-                            item.permissions,
-                            item.isLocked);
-                    });
+        return this.http.get<{ total: number, items: any[] } & Resource>(url).pipe(
+            map(({ total, items, _links }) => {
+                const users = items.map(item => parseUser(item));
 
-                    return new UsersDto(response.total, users);
-                }),
-                pretifyError('Failed to load users. Please reload.'));
+                return new UsersDto(total, users, _links);
+            }),
+            pretifyError('Failed to load users. Please reload.'));
     }
 
     public getUser(id: string): Observable<UserDto> {
         const url = this.apiUrl.buildUrl(`api/user-management/${id}`);
 
-        return this.http.get<any>(url).pipe(
-                map(response => {
-                    return new UserDto(
-                        response.id,
-                        response.email,
-                        response.displayName,
-                        response.permissions,
-                        response.isLocked);
-                }),
-                pretifyError('Failed to load user. Please reload.'));
+        return this.http.get(url).pipe(
+            map(body => {
+                return parseUser(body);
+            }),
+            pretifyError('Failed to load user. Please reload.'));
     }
 
     public postUser(dto: CreateUserDto): Observable<UserDto> {
         const url = this.apiUrl.buildUrl('api/user-management');
 
-        return this.http.post<any>(url, dto).pipe(
-                map(response => {
-                    return new UserDto(
-                        response.id,
-                        dto.email,
-                        dto.displayName,
-                        dto.permissions,
-                        false);
-                }),
-                pretifyError('Failed to create user. Please reload.'));
+        return this.http.post(url, dto).pipe(
+            map(body => {
+                return parseUser(body);
+            }),
+            pretifyError('Failed to create user. Please reload.'));
     }
 
-    public putUser(id: string, dto: UpdateUserDto): Observable<any> {
-        const url = this.apiUrl.buildUrl(`api/user-management/${id}`);
+    public putUser(user: Resource, dto: UpdateUserDto): Observable<UserDto> {
+        const link = user._links['update'];
 
-        return this.http.put(url, dto).pipe(
-                pretifyError('Failed to update user. Please reload.'));
+        const url = this.apiUrl.buildUrl(link.href);
+
+        return this.http.request(link.method, url, { body: dto }).pipe(
+            map(body => {
+                return parseUser(body);
+            }),
+            pretifyError('Failed to update user. Please reload.'));
     }
 
-    public lockUser(id: string): Observable<any> {
-        const url = this.apiUrl.buildUrl(`api/user-management/${id}/lock`);
+    public lockUser(user: Resource): Observable<UserDto> {
+        const link = user._links['lock'];
 
-        return this.http.put(url, {}).pipe(
-                pretifyError('Failed to load users. Please retry.'));
+        const url = this.apiUrl.buildUrl(link.href);
+
+        return this.http.request(link.method, url).pipe(
+            map(body => {
+                return parseUser(body);
+            }),
+            pretifyError('Failed to load users. Please retry.'));
     }
 
-    public unlockUser(id: string): Observable<any> {
-        const url = this.apiUrl.buildUrl(`api/user-management/${id}/unlock`);
+    public unlockUser(user: Resource): Observable<UserDto> {
+        const link = user._links['unlock'];
 
-        return this.http.put(url, {}).pipe(
-                pretifyError('Failed to load users. Please retry.'));
+        const url = this.apiUrl.buildUrl(link.href);
+
+        return this.http.request(link.method, url).pipe(
+            map(body => {
+                return parseUser(body);
+            }),
+            pretifyError('Failed to load users. Please retry.'));
     }
+}
+
+function parseUser(response: any) {
+    return new UserDto(
+        response._links,
+        response.id,
+        response.email,
+        response.displayName,
+        response.permissions,
+        response.isLocked);
 }

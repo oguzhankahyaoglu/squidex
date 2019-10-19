@@ -74,6 +74,11 @@ namespace Squidex.Domain.Apps.Core.EnrichContent
             return JsonValue.Array();
         }
 
+        public IJsonValue Visit(IField<UIFieldProperties> field)
+        {
+            return JsonValue.Null;
+        }
+
         public IJsonValue Visit(IField<DateTimeFieldProperties> field)
         {
             if (field.Properties.CalculatedDefaultValue == DateTimeCalculatedDefaultValue.Now)
@@ -83,7 +88,7 @@ namespace Squidex.Domain.Apps.Core.EnrichContent
 
             if (field.Properties.CalculatedDefaultValue == DateTimeCalculatedDefaultValue.Today)
             {
-                return JsonValue.Create(now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                return JsonValue.Create($"{now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}T00:00:00Z");
             }
 
             return JsonValue.Create(field.Properties.DefaultValue?.ToString());

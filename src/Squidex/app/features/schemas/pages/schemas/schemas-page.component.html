@@ -1,4 +1,4 @@
-<sqx-title message="{app} | Schemas" parameter1="app" [value1]="appsState.appName"></sqx-title>
+<sqx-title message="Schemas"></sqx-title>
 
 <sqx-panel theme="dark" desiredWidth="30rem" showSecondHeader="true">
     <ng-container title>
@@ -6,12 +6,17 @@
     </ng-container>
     
     <ng-container secondHeader>
-        <sqx-shortcut keys="ctrl+shift+g" (trigger)="addSchemaDialog.show()"></sqx-shortcut>
         <sqx-shortcut keys="ctrl+shift+f" (trigger)="inputFind.focus()"></sqx-shortcut>
 
-        <button type="button" class="btn btn-success subheader-button" (click)="createSchema()" title="New Schema (CTRL + SHIFT + G)" titlePosition="top-left">
-            <i class="icon-plus"></i>          
-        </button>
+        <ng-container *ngIf="schemasState.canCreate | async">
+            <sqx-shortcut keys="ctrl+shift+g" (trigger)="addSchemaDialog.show()"></sqx-shortcut>
+
+            <button type="button" class="btn btn-success subheader-button" (click)="createSchema()"
+                title="New Schema (CTRL + SHIFT + G)" 
+                titlePosition="top-left">
+                <i class="icon-plus"></i>          
+            </button>
+        </ng-container>
         
         <div class="search-form">
             <input class="form-control form-control-dark" #inputFind [formControl]="schemasFilter" placeholder="Search for schemas..." />
@@ -21,12 +26,13 @@
     </ng-container>
 
     <ng-container content>
-        <sqx-schema-category *ngFor="let category of schemasState.categories | async; trackBy: trackByCategory"
-            [name]="category"
-            [schemas]="schemasState.schemas | async"
-            [schemasFilter]="schemasFilter.valueChanges | async"
-            (remove)="removeCategory(category)">
-        </sqx-schema-category>
+        <div cdkDropListGroup>
+            <sqx-schema-category *ngFor="let category of schemasState.categories | async; trackBy: trackByCategory"
+                [schemaCategory]="category"
+                [schemasFilter]="schemasFilter.valueChanges | async"
+                (remove)="removeCategory(category.name)">
+            </sqx-schema-category>
+        </div>
 
         <form [formGroup]="addCategoryForm.form" (ngSubmit)="addCategory()">
             <input class="form-control form-control-dark new-category-input" formControlName="name" placeholder="Create new category..." />
@@ -34,10 +40,9 @@
     </ng-container>
 </sqx-panel>
 
-<ng-container *sqxModalView="addSchemaDialog;onRoot:true">
+<ng-container *sqxModal="addSchemaDialog">
     <sqx-schema-form [import]="import"
-        (cancel)="addSchemaDialog.hide()"
-        (create)="redirectSchema($event)">
+        (cancel)="addSchemaDialog.hide()" (complete)="redirectSchema($event)">
     </sqx-schema-form>
 </ng-container>
 

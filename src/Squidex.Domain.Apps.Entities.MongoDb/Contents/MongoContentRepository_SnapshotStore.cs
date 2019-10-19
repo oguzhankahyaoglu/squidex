@@ -6,17 +6,12 @@
 // ==========================================================================
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Squidex.Domain.Apps.Core.Contents;
-using Squidex.Domain.Apps.Entities.Contents;
 using Squidex.Domain.Apps.Entities.Contents.State;
 using Squidex.Domain.Apps.Entities.Schemas;
 using Squidex.Infrastructure;
 using Squidex.Infrastructure.Log;
-using Squidex.Infrastructure.Queries;
 using Squidex.Infrastructure.Reflection;
 using Squidex.Infrastructure.States;
 
@@ -58,14 +53,6 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
                 }
 
                 var schema = await GetSchemaAsync(value.AppId.Id, value.SchemaId.Id);
-                //calculate only on inserts, updates would be already stored
-                if (newVersion == 0)
-                {
-                    if (value.OrderNo == null || value.OrderNo == 0)
-                    {
-                        value.OrderNo = await CalculateNewOrderNoAsync(schema);
-                    }
-                }
 
                 var idData = value.Data.ToMongoModel(schema.SchemaDef, serializer);
                 var idDraftData = idData;
@@ -89,31 +76,6 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
 
                 await contents.UpsertAsync(content, oldVersion);
             }
-        }
-
-        /// <summary>
-        /// new orderNo fields must be calculated in ascending order, such as 1,2,3,4 as contents are created.
-        /// By this way, we can switch order no values from ui by drag-drop actions.
-        /// </summary>
-        /// <param name="schema"></param>
-        /// <returns></returns>
-        private async Task<long?> CalculateNewOrderNoAsync(ISchemaEntity schema)
-        {
-            var query = new Query
-            {
-                Take = 1,
-                Sort = new List<SortNode>
-                {
-                    new SortNode(new List<string> { nameof(IContentEntity.OrderNo) }, SortOrder.Descending)
-                }
-            };
-            var maxDraftContent = await contents.QueryAsync(null, schema, query, null, null, true);
-            var maxDraftOrderNo = maxDraftContent.FirstOrDefault()?.OrderNo ?? 0;
-
-            var maxPublishedContent = await contents.QueryAsync(null, schema, query, null, null, false);
-            var maxPublishedOrderNo = maxPublishedContent.FirstOrDefault()?.OrderNo ?? 0;
-
-            return Math.Max(maxDraftOrderNo, maxPublishedOrderNo) + 1;
         }
 
         private async Task<ISchemaEntity> GetSchemaAsync(Guid appId, Guid schemaId)

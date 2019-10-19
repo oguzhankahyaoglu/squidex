@@ -6,10 +6,10 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
+import { ActivatedRoute } from '@angular/router';
 
 import {
-    AppsState,
+    ResourceOwner,
     RuleEventDto,
     RuleEventsState
 } from '@app/shared';
@@ -19,37 +19,44 @@ import {
     styleUrls: ['./rule-events-page.component.scss'],
     templateUrl: './rule-events-page.component.html'
 })
-export class RuleEventsPageComponent implements OnInit {
+export class RuleEventsPageComponent extends ResourceOwner implements OnInit {
     public selectedEventId: string | null = null;
 
     constructor(
-        public readonly appsState: AppsState,
-        public readonly ruleEventsState: RuleEventsState
+        public readonly ruleEventsState: RuleEventsState,
+        private readonly route: ActivatedRoute
     ) {
+        super();
     }
 
     public ngOnInit() {
-        this.ruleEventsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.own(
+            this.route.queryParams
+                .subscribe(x => {
+                    this.ruleEventsState.filterByRule(x.ruleId);
+                }));
+
+        this.ruleEventsState.load();
     }
 
     public reload() {
-        this.ruleEventsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.ruleEventsState.load(true);
     }
 
     public goNext() {
-        this.ruleEventsState.goNext().pipe(onErrorResumeNext()).subscribe();
+        this.ruleEventsState.goNext();
     }
 
     public goPrev() {
-        this.ruleEventsState.goPrev().pipe(onErrorResumeNext()).subscribe();
+        this.ruleEventsState.goPrev();
     }
 
     public enqueue(event: RuleEventDto) {
-        this.ruleEventsState.enqueue(event).pipe(onErrorResumeNext()).subscribe();
+        this.ruleEventsState.enqueue(event);
     }
 
     public cancel(event: RuleEventDto) {
-        this.ruleEventsState.cancel(event).pipe(onErrorResumeNext()).subscribe();
+        this.ruleEventsState.cancel(event);
     }
 
     public selectEvent(id: string) {
@@ -60,4 +67,3 @@ export class RuleEventsPageComponent implements OnInit {
         return ruleEvent.id;
     }
 }
-

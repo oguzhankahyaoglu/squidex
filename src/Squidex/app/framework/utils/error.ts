@@ -5,20 +5,36 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+import { Types } from './types';
+
 export class ErrorDto {
     public readonly displayMessage: string;
 
     constructor(
         public readonly statusCode: number,
         public readonly message: string,
-        public readonly details: string[] = []
+        public readonly details: ReadonlyArray<string> = [],
+        public readonly inner?: any
     ) {
         this.displayMessage = formatMessage(message, details);
     }
+
+    public toString() {
+        return `ErrorDto(${JSON.stringify(this)})`;
+    }
 }
 
+export function getDisplayMessage(error?: string | ErrorDto) {
+    if (!error) {
+        return null;
+    } else if (Types.is(error, ErrorDto)) {
+        return error.displayMessage;
+    } else {
+        return error;
+    }
+}
 
-function formatMessage(message: string, details?: string[]) {
+function formatMessage(message: string, details?: ReadonlyArray<string>) {
     const appendLast = (row: string, char: string) => {
         const last = row[row.length - 1];
 
@@ -42,7 +58,7 @@ function formatMessage(message: string, details?: string[]) {
     if (details && details.length > 1) {
         let result = appendLast(message, '.') + '<ul>';
 
-        for (let detail of details) {
+        for (const detail of details) {
             result += `<li>${appendLast(detail, '.')}</li>`;
         }
 

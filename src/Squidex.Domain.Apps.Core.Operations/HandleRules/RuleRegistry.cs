@@ -13,6 +13,7 @@ using System.Reflection;
 using Squidex.Domain.Apps.Core.HandleRules.EnrichedEvents;
 using Squidex.Domain.Apps.Core.Rules;
 using Squidex.Infrastructure;
+using Squidex.Infrastructure.Reflection;
 
 #pragma warning disable RECS0033 // Convert 'if' to '||' expression
 
@@ -60,6 +61,7 @@ namespace Squidex.Domain.Apps.Core.HandleRules
                 new RuleActionDefinition
                 {
                     Type = actionType,
+                    Title = metadata.Title,
                     Display = metadata.Display,
                     Description = metadata.Description,
                     IconColor = metadata.IconColor,
@@ -87,7 +89,7 @@ namespace Squidex.Domain.Apps.Core.HandleRules
 
                     var type = property.PropertyType;
 
-                    if ((property.GetCustomAttribute<RequiredAttribute>() != null || (type.IsValueType && !IsNullable(type))) && type != typeof(bool) && type != typeof(bool?))
+                    if ((GetDataAttribute<RequiredAttribute>(property) != null || (type.IsValueType && !IsNullable(type))) && type != typeof(bool) && type != typeof(bool?))
                     {
                         actionProperty.IsRequired = true;
                     }
@@ -97,7 +99,7 @@ namespace Squidex.Domain.Apps.Core.HandleRules
                         actionProperty.IsFormattable = true;
                     }
 
-                    var dataType = property.GetCustomAttribute<DataTypeAttribute>()?.DataType;
+                    var dataType = GetDataAttribute<DataTypeAttribute>(property)?.DataType;
 
                     if (type == typeof(bool) || type == typeof(bool?))
                     {
@@ -133,6 +135,15 @@ namespace Squidex.Domain.Apps.Core.HandleRules
             }
 
             actionTypes[name] = definition;
+        }
+
+        private static T GetDataAttribute<T>(PropertyInfo property) where T : ValidationAttribute
+        {
+            var result = property.GetCustomAttribute<T>();
+
+            result?.IsValid(null);
+
+            return result;
         }
 
         private static bool IsNullable(Type type)

@@ -12,13 +12,14 @@ using Squidex.Domain.Apps.Core.Apps;
 using Squidex.Domain.Apps.Entities.Apps.Commands;
 using Squidex.Domain.Apps.Entities.Apps.Services;
 using Squidex.Infrastructure;
+using Squidex.Infrastructure.Validation;
 using Squidex.Shared.Users;
 
 namespace Squidex.Domain.Apps.Entities.Apps.Guards
 {
     public static class GuardAppContributors
     {
-        public static Task CanAssign(AppContributors contributors, AssignContributor command, IUserResolver users, IAppLimitsPlan plan, Roles roles)
+        public static Task CanAssign(AppContributors contributors, Roles roles, AssignContributor command, IUserResolver users, IAppLimitsPlan plan)
         {
             Guard.NotNull(command, nameof(command));
 
@@ -32,33 +33,40 @@ namespace Squidex.Domain.Apps.Entities.Apps.Guards
                 if (string.IsNullOrWhiteSpace(command.ContributorId))
                 {
                     e(Not.Defined("Contributor id"), nameof(command.ContributorId));
-                    return;
                 }
-
-                var user = await users.FindByIdOrEmailAsync(command.ContributorId);
-
-                if (user == null)
+                else
                 {
-                    throw new DomainObjectNotFoundException(command.ContributorId, "Contributors", typeof(IAppEntity));
-                }
+                    var user = await users.FindByIdOrEmailAsync(command.ContributorId);
 
-                command.ContributorId = user.Id;
-
-                if (string.Equals(command.ContributorId, command.Actor?.Identifier, StringComparison.OrdinalIgnoreCase) && !command.IsRestore)
-                {
-                    throw new DomainForbiddenException("You cannot change your own role.");
-                }
-
-                if (contributors.TryGetValue(command.ContributorId, out var existing))
-                {
-                    if (existing == command.Role)
+                    if (user == null)
                     {
-                        e(Not.New("Contributor", "role"), nameof(command.Role));
+                        throw new DomainObjectNotFoundException(command.ContributorId, "Contributors", typeof(IAppEntity));
                     }
-                }
-                else if (plan.MaxContributors == contributors.Count)
-                {
-                    e("You have reached the maximum number of contributors for your plan.");
+
+                    command.ContributorId = user.Id;
+
+                    if (!command.IsRestore)
+                    {
+                        if (string.Equals(command.ContributorId, command.Actor?.Identifier, StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new DomainForbiddenException("You cannot change your own role.");
+                        }
+
+                        if (contributors.TryGetValue(command.ContributorId, out var role))
+                        {
+                            if (role == command.Role)
+                            {
+                                e(Not.New("Contributor", "role"), nameof(command.Role));
+                            }
+                        }
+                        else
+                        {
+                            if (plan.MaxContributors > 0 && contributors.Count >= plan.MaxContributors)
+                            {
+                                e("You have reached the maximum number of contributors for your plan.");
+                            }
+                        }
+                    }
                 }
             });
         }

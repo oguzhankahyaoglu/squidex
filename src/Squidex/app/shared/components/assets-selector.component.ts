@@ -6,13 +6,13 @@
  */
 
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
     AssetDto,
-    AssetsDialogState,
+    AssetsState,
     fadeAnimation,
     LocalStoreService,
+    Query,
     StatefulComponent
 } from '@app/shared/internal';
 
@@ -34,10 +34,10 @@ interface State {
 })
 export class AssetsSelectorComponent extends StatefulComponent<State> implements OnInit {
     @Output()
-    public select = new EventEmitter<AssetDto[]>();
+    public select = new EventEmitter<ReadonlyArray<AssetDto>>();
 
     constructor(changeDector: ChangeDetectorRef,
-        public readonly assetsState: AssetsDialogState,
+        public readonly assetsState: AssetsState,
         public readonly localStore: LocalStoreService
     ) {
         super(changeDector, {
@@ -48,15 +48,15 @@ export class AssetsSelectorComponent extends StatefulComponent<State> implements
     }
 
     public ngOnInit() {
-        this.assetsState.load().pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.load();
     }
 
     public reload() {
-        this.assetsState.load(true).pipe(onErrorResumeNext()).subscribe();
+        this.assetsState.load(true);
     }
 
-    public search(query: string) {
-        this.assetsState.search(query).pipe(onErrorResumeNext()).subscribe();
+    public search(query: Query) {
+        this.assetsState.search(query);
     }
 
     public emitComplete() {
@@ -67,8 +67,8 @@ export class AssetsSelectorComponent extends StatefulComponent<State> implements
         this.select.emit(Object.values(this.snapshot.selectedAssets));
     }
 
-    public selectTags(tags: string[]) {
-        this.assetsState.selectTags(tags).pipe(onErrorResumeNext()).subscribe();
+    public selectTags(tags: ReadonlyArray<string>) {
+        this.assetsState.selectTags(tags);
     }
 
     public selectAsset(asset: AssetDto) {
@@ -93,4 +93,3 @@ export class AssetsSelectorComponent extends StatefulComponent<State> implements
         this.localStore.setBoolean('squidex.assets.list-view', isListView);
     }
 }
-

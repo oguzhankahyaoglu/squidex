@@ -8,14 +8,14 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { map, onErrorResumeNext } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 import {
-    AppsState,
     CreateCategoryForm,
     DialogModel,
     MessageBus,
     ResourceOwner,
+    SchemaCategory,
     SchemaDto,
     SchemasState
 } from '@app/shared';
@@ -36,7 +36,6 @@ export class SchemasPageComponent extends ResourceOwner implements OnInit {
     public import: any;
 
     constructor(
-        public readonly appsState: AppsState,
         public readonly schemasState: SchemasState,
         private readonly formBuilder: FormBuilder,
         private readonly messageBus: MessageBus,
@@ -63,7 +62,7 @@ export class SchemasPageComponent extends ResourceOwner implements OnInit {
                     }
                 }));
 
-        this.schemasState.load().pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.load();
     }
 
     public removeCategory(name: string) {
@@ -77,7 +76,7 @@ export class SchemasPageComponent extends ResourceOwner implements OnInit {
             try {
                this.schemasState.addCategory(value.name);
             } finally {
-                this.addCategoryForm.submitCompleted({});
+                this.addCategoryForm.submitCompleted();
             }
         }
     }
@@ -94,8 +93,7 @@ export class SchemasPageComponent extends ResourceOwner implements OnInit {
         this.addSchemaDialog.show();
     }
 
-    public trackByCategory(index: number, category: string) {
-        return category;
+    public trackByCategory(index: number, category: SchemaCategory) {
+        return category.name;
     }
 }
-

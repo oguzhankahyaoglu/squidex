@@ -1,7 +1,7 @@
 @import '_vars';
 @import '_mixins';
 
-:host /deep/ {
+:host ::ng-deep {
     .search {
         .form-control {
             @include border-radius-right;
@@ -18,5 +18,13 @@
                 z-index: 1000;
             }
         }
+    }
+
+    .modal-body {
+        background: $color-background;
+    }
+
+    .modal-tabs {
+        background: $color-dark-foreground;
     }
 }

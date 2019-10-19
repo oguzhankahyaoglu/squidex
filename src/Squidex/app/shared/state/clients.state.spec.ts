@@ -9,102 +9,130 @@ import { of } from 'rxjs';
 import { IMock, It, Mock, Times } from 'typemoq';
 
 import {
-    AppClientDto,
-    AppClientsDto,
-    AppClientsService,
-    AppsState,
+    ClientsPayload,
+    ClientsService,
     ClientsState,
-    CreateAppClientDto,
     DialogService,
-    UpdateAppClientDto,
-    Version,
-    Versioned
- } from '@app/shared';
+    versioned
+} from '@app/shared/internal';
+
+import { createClients } from '../services/clients.service.spec';
+
+import { TestValues } from './_test-helpers';
 
 describe('ClientsState', () => {
-    const app = 'my-app';
-    const version = new Version('1');
-    const newVersion = new Version('2');
+    const {
+        app,
+        appsState,
+        newVersion,
+        version
+    } = TestValues;
 
-    const oldClients = [
-        new AppClientDto('id1', 'name1', 'secret1', 'Developer'),
-        new AppClientDto('id2', 'name2', 'secret2', 'Developer')
-    ];
+    const oldClients = createClients(1, 2);
 
     let dialogs: IMock<DialogService>;
-    let appsState: IMock<AppsState>;
-    let clientsService: IMock<AppClientsService>;
+    let clientsService: IMock<ClientsService>;
     let clientsState: ClientsState;
 
     beforeEach(() => {
         dialogs = Mock.ofType<DialogService>();
 
-        appsState = Mock.ofType<AppsState>();
-
-        appsState.setup(x => x.appName)
-            .returns(() => app);
-
-        clientsService = Mock.ofType<AppClientsService>();
-
-        clientsService.setup(x => x.getClients(app))
-            .returns(() => of(new AppClientsDto(oldClients, version)));
-
+        clientsService = Mock.ofType<ClientsService>();
         clientsState = new ClientsState(clientsService.object, appsState.object, dialogs.object);
-        clientsState.load().subscribe();
     });
 
-    it('should load clients', () => {
-        expect(clientsState.snapshot.clients.values).toEqual(oldClients);
-        expect(clientsState.snapshot.version).toEqual(version);
-        expect(clientsState.isLoaded).toBeTruthy();
-
-        dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.never());
+    afterEach(() => {
+        clientsService.verifyAll();
     });
 
-    it('should show notification on load when reload is true', () => {
-        clientsState.load(true).subscribe();
+    describe('Loading', () => {
+        it('should load clients', () => {
+            clientsService.setup(x => x.getClients(app))
+                .returns(() => of(versioned(version, oldClients))).verifiable();
 
-        expect().nothing();
+            clientsState.load().subscribe();
 
-        dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.once());
+            expect(clientsState.snapshot.clients).toEqual(oldClients.items);
+            expect(clientsState.snapshot.version).toEqual(version);
+            expect(clientsState.isLoaded).toBeTruthy();
+
+            dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.never());
+        });
+
+        it('should show notification on load when reload is true', () => {
+            clientsService.setup(x => x.getClients(app))
+                .returns(() => of(versioned(version, oldClients))).verifiable();
+
+            clientsState.load(true).subscribe();
+
+            expect().nothing();
+
+            dialogs.verify(x => x.notifyInfo(It.isAnyString()), Times.once());
+        });
     });
 
-    it('should add client to snapshot when created', () => {
-        const newClient = new AppClientDto('id3', 'name3', 'secret3', 'Developer');
+    describe('Updates', () => {
+        beforeEach(() => {
+            clientsService.setup(x => x.getClients(app))
+                .returns(() => of(versioned(version, oldClients))).verifiable();
 
-        const request = new CreateAppClientDto('id3');
+            clientsState.load().subscribe();
+        });
 
-        clientsService.setup(x => x.postClient(app, request, version))
-            .returns(() => of(new Versioned<AppClientDto>(newVersion, newClient)));
+        it('should update clients when client added', () => {
+            const updated = createClients(1, 2, 3);
 
-        clientsState.attach(request).subscribe();
+            const request = { id: 'id3' };
 
-        expect(clientsState.snapshot.clients.values).toEqual([...oldClients, newClient]);
-        expect(clientsState.snapshot.version).toEqual(newVersion);
-    });
+            clientsService.setup(x => x.postClient(app, request, version))
+                .returns(() => of(versioned(newVersion, updated))).verifiable();
 
-    it('should update properties when updated', () => {
-        const request = new UpdateAppClientDto('NewName', 'NewRole');
+            clientsState.attach(request).subscribe();
 
-        clientsService.setup(x => x.putClient(app, oldClients[0].id, request, version))
-            .returns(() => of(new Versioned<any>(newVersion, {})));
+            expectNewClients(updated);
+        });
 
-        clientsState.update(oldClients[0], request).subscribe();
+        it('should update clients when role updated', () => {
+            const updated = createClients(1, 2, 3);
 
-        const client_1 = clientsState.snapshot.clients.at(0);
+            const request = { role: 'Owner' };
 
-        expect(client_1.name).toBe('NewName');
-        expect(client_1.role).toBe('NewRole');
-        expect(clientsState.snapshot.version).toEqual(newVersion);
-    });
+            clientsService.setup(x => x.putClient(app, oldClients.items[0], request, version))
+                .returns(() => of(versioned(newVersion, updated))).verifiable();
 
-    it('should remove client from snapshot when revoked', () => {
-        clientsService.setup(x => x.deleteClient(app, oldClients[0].id, version))
-            .returns(() => of(new Versioned<any>(newVersion, {})));
+            clientsState.update(oldClients.items[0], request).subscribe();
 
-        clientsState.revoke(oldClients[0]).subscribe();
+            expectNewClients(updated);
+        });
 
-        expect(clientsState.snapshot.clients.values).toEqual([oldClients[1]]);
-        expect(clientsState.snapshot.version).toEqual(newVersion);
+        it('should update clients when name updated', () => {
+            const updated = createClients(1, 2, 3);
+
+            const request = { name: 'NewName' };
+
+            clientsService.setup(x => x.putClient(app, oldClients.items[0], request, version))
+                .returns(() => of(versioned(newVersion, updated))).verifiable();
+
+            clientsState.update(oldClients.items[0], request).subscribe();
+
+            expectNewClients(updated);
+        });
+
+        it('should update clients when client revoked', () => {
+            const updated = createClients(1, 2, 3);
+
+            clientsService.setup(x => x.deleteClient(app, oldClients.items[0], version))
+                .returns(() => of(versioned(newVersion, updated))).verifiable();
+
+            clientsState.revoke(oldClients.items[0]).subscribe();
+
+            expectNewClients(updated);
+        });
+
+        function expectNewClients(updated: ClientsPayload) {
+            expect(clientsState.snapshot.clients).toEqual(updated.items);
+            expect(clientsState.snapshot.version).toEqual(newVersion);
+
+        }
     });
 });

@@ -7,21 +7,19 @@
 
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { onErrorResumeNext } from 'rxjs/operators';
 
 import {
-    AppPatternDto,
     createProperties,
     DialogModel,
+    DialogService,
     EditFieldForm,
     fadeAnimation,
-    ImmutableArray,
     ModalModel,
     NestedFieldDto,
+    PatternDto,
     RootFieldDto,
     SchemaDetailsDto,
-    SchemasState,
-    UpdateFieldDto
+    SchemasState
 } from '@app/shared';
 
 @Component({
@@ -43,30 +41,32 @@ export class FieldComponent implements OnChanges {
     public parent: RootFieldDto;
 
     @Input()
-    public patterns: ImmutableArray<AppPatternDto>;
+    public patterns: ReadonlyArray<PatternDto>;
 
     public dropdown = new ModalModel();
 
+    public trackByFieldFn: (index: number, field: NestedFieldDto) => any;
+
     public isEditing = false;
-    public selectedTab = 0;
+    public isEditable = false;
 
     public editForm = new EditFieldForm(this.formBuilder);
 
     public addFieldDialog = new DialogModel();
 
     constructor(
+        private readonly dialogs: DialogService,
         private readonly formBuilder: FormBuilder,
         private readonly schemasState: SchemasState
     ) {
+        this.trackByFieldFn = this.trackByField.bind(this);
     }
 
     public ngOnChanges(changes: SimpleChanges) {
         if (changes['field']) {
-            this.editForm.load(this.field.properties);
+            this.isEditable = this.field.canUpdate;
 
-            if (this.field.isLocked) {
-                this.editForm.form.disable();
-            }
+            this.editForm.load(this.field.properties);
         }
     }
 
@@ -78,55 +78,56 @@ export class FieldComponent implements OnChanges {
         }
     }
 
-    public selectTab(tab: number) {
-        this.selectedTab = tab;
-    }
-
     public deleteField() {
-        this.schemasState.deleteField(this.schema, this.field).pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.deleteField(this.schema, this.field);
     }
 
     public enableField() {
-        this.schemasState.enableField(this.schema, this.field).pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.enableField(this.schema, this.field);
     }
 
     public disableField() {
-        this.schemasState.disableField(this.schema, this.field).pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.disableField(this.schema, this.field);
     }
 
     public showField() {
-        this.schemasState.showField(this.schema, this.field).pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.showField(this.schema, this.field);
     }
 
     public hideField() {
-        this.schemasState.hideField(this.schema, this.field).pipe(onErrorResumeNext()).subscribe();
+        this.schemasState.hideField(this.schema, this.field);
     }
 
-    public sortFields(fields: NestedFieldDto[]) {
-        this.schemasState.sortFields(this.schema, fields, <any>this.field).subscribe();
+    public sortFields(fields: ReadonlyArray<NestedFieldDto>) {
+        this.schemasState.orderFields(this.schema, fields, <any>this.field).subscribe();
     }
 
     public lockField() {
-        this.schemasState.lockField(this.schema, this.field).pipe(onErrorResumeNext()).subscribe();
-    }
-
-    public trackByField(index: number, field: NestedFieldDto) {
-        return field.fieldId + this.schema.id;
+        this.schemasState.lockField(this.schema, this.field);
     }
 
     public save() {
+        if (!this.isEditable) {
+            return;
+        }
+
         const value = this.editForm.submit();
 
         if (value) {
-            const properties = createProperties(this.field.properties['fieldType'], value);
+            const properties = createProperties(this.field.properties.fieldType, value);
 
-            this.schemasState.updateField(this.schema, this.field, new UpdateFieldDto(properties))
+            this.schemasState.updateField(this.schema, this.field, { properties })
                 .subscribe(() => {
                     this.editForm.submitCompleted();
+
+                    this.dialogs.notifyInfo('Field saved successfully.');
                 }, error => {
                     this.editForm.submitFailed(error);
                 });
         }
     }
-}
 
+    public trackByField(index: number, field: NestedFieldDto) {
+        return field.fieldId + this.schema.id;
+    }
+}
