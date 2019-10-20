@@ -1,0 +1,18 @@
+.navbar-dark .navbar-brand {
+    background-color: #192532 !important;
+}
+.navbar.bg-primary{
+    background-color: #263545 !important;
+}
+.navbar.bg-primary .nav .nav-item .nav-link{
+    background-color: #263545 !important;
+}
+.support-button{
+    display:none !important;
+}
+.panel-content{
+    background-color: white  !important;
+}
+.table-items-row{
+    background-color:#c5d2d8 !important;
+}
