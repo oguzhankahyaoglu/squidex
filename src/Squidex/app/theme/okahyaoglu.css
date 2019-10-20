@@ -10,9 +10,6 @@
 .support-button{
     display:none !important;
 }
-.panel-content{
+.panel.panel-light .panel-main .panel-content{
     background-color: white  !important;
-}
-.table-items-row{
-    background-color:#c5d2d8 !important;
 }
