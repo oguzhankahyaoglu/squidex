@@ -19,10 +19,10 @@ export class SortedDirective implements OnDestroy, OnInit {
     public dragHandle = '.drag-handle';
 
     @Input('sqxSortModel')
-    public sortModel: any[];
+    public sortModel: ReadonlyArray<any>;
 
     @Output('sqxSort')
-    public sort = new EventEmitter<any[]>();
+    public sort = new EventEmitter<ReadonlyArray<any>>();
 
     constructor(
         private readonly elementRef: ElementRef

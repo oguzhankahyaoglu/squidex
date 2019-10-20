@@ -37,17 +37,11 @@ export class Queries {
     public queriesUser: Observable<ReadonlyArray<SavedQuery>>;
 
     public defaultQueries: ReadonlyArray<SavedQuery> = [
-        { name: 'All (newest first)', queryJson: '' },
+        { name: 'All (by order no)', queryJson: '' },
+        { name: 'All (newest first)', queryJson: encodeQuery({sort : [ {path:'lastModified', order : 'descending'} ]}) },
         { name: 'All (oldest first)', queryJson: encodeQuery(OLDEST_FIRST), query: OLDEST_FIRST }
-    //???
-    [{
-        name: 'All (by order no)', filter: ''
-    }, {
-        name: 'All (newest first)', filter: '$orderby=lastModified desc'
-    }, {
-        name: 'All (oldest first)', filter: '$orderby=lastModified asc'
-    }];
-
+    ];
+    
     constructor(
         private readonly uiState: UIState,
         private readonly prefix: string

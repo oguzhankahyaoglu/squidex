@@ -92,7 +92,7 @@ export class ContentDto {
         public readonly schemaDisplayName: string,
         public readonly referenceData: ContentReferences,
         public readonly referenceFields: ReadonlyArray<RootFieldDto>,
-        public readonly version: Version
+        public readonly version: Version,
         public orderNo: Number
     ) {
         this._links = links;
@@ -337,5 +337,6 @@ function parseContent(response: any) {
         response.schemaDisplayName,
         response.referenceData,
         response.referenceFields.map((item: any) => parseField(item)),
-        new Version(response.version.toString()));
+        new Version(response.version.toString()),
+        response.orderNo);
 }

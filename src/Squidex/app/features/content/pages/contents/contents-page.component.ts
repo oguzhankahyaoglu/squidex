@@ -194,7 +194,8 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
     }
 
     public onDrop($event: any) {
-        let newItems  = JSON.parse(JSON.stringify(this.contentsState.contentsArray));
+        let newItems  = JSON.parse(JSON.stringify(this.contentsState.contents));
+        // test et
         for (let i = 0; i < newItems.length; i++) {
             newItems[i].orderNo = this.contentsState.snapshot.contents.values[i].orderNo;
         }

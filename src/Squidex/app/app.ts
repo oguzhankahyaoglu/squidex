@@ -6,7 +6,7 @@
  */
 
 import './theme/theme.scss';
-import './theme/okahyaoglu.less';
+import './theme/okahyaoglu.css';
 
 import { enableProdMode } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';

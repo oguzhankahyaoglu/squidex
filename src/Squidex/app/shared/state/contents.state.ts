@@ -266,7 +266,7 @@ export abstract class ContentsStateBase extends State<Snapshot> {
             shareSubscribed(this.dialogs));
     }
 
-    public updateOrderNo(contents: ContentDto[]): Observable<any> {
+    public updateOrderNo(contents: ReadonlyArray<ContentDto>): Observable<any> {
         const data: { id: string; orderNo: Number; }[] = [];
         contents.forEach((c, i) => data.push({id: c.id, orderNo: c.orderNo}));
         // return this.contentsService.updateOrderNo(this.appName, this.schemaName, data).pipe(
