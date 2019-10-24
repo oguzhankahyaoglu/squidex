@@ -1,0 +1,2 @@
+Image upload field'ları default grid görünümünde geliyor, onları list view'da getirmeli
+Şema görme yetkisi yok ise, sol ilk menüyü hiç getirmemeliyim. Direkt olarak admin paneli gibi sol menü görünmeli.
