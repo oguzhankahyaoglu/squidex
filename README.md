@@ -10,3 +10,8 @@ db.collection.aggregate([
   }
 ])
 ```
+
+Features of this fork:
+- Content sorting
+- Left menu changes based on scheme edit claim: if user has no rights to edit schemes, 1st level of left menu is directly hidden
+- Theme changed to materialish design
