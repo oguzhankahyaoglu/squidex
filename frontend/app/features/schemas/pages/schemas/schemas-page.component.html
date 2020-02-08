@@ -26,7 +26,7 @@
     </ng-container>
 
     <ng-container content>
-        <div cdkDropListGroup>
+        <div cdkDropListGroup class="left-menu-wrapper">
             <sqx-schema-category *ngFor="let category of schemasState.categories | async; trackBy: trackByCategory"
                 [schemaCategory]="category"
                 [schemasFilter]="schemasFilter.valueChanges | async"

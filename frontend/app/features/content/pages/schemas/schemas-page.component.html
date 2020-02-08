@@ -1,13 +1,9 @@
 <sqx-title message="Contents"></sqx-title>
 
-<sqx-panel theme="dark" [desiredWidth]="width" [showClose]="!isCollapsed" showSecondHeader="true">
-    <ng-container title>
-        <ng-container *ngIf="!isCollapsed">
-            Schemas
-        </ng-container>
-    </ng-container>
+<sqx-panel [id]="'left-menu-panel-wrapper'" theme="dark" [desiredWidth]="width" [showClose]="!isCollapsed" showSecondHeader="true">
 
-    <ng-container header>
+
+    <ng-container header *ngIf="false">
         <a class="panel-close btn-collapse" [class.collapsed]="isCollapsed" (click)="toggle()">
             <i 
                 [class.icon-angle-double-left]="!isCollapsed"
@@ -16,7 +12,7 @@
         </a>
     </ng-container>
 
-    <ng-container secondHeader>
+    <ng-container secondHeader *ngIf="false">
         <ng-container *ngIf="!isCollapsed">
             <sqx-shortcut keys="ctrl+shift+f" (trigger)="inputFind.focus()"></sqx-shortcut>
 
@@ -29,7 +25,7 @@
     </ng-container>
 
     <ng-container content>
-        <div [class.hidden]="isCollapsed">
+        <div [class.hidden]="isCollapsed" class="left-menu-wrapper2">
             <ng-container *ngIf="schemasState.publishedSchemas | async; let schemas">
                 <sqx-schema-category *ngFor="let category of schemasState.categories | async; trackBy: trackByCategory"
                     [schemaCategory]="category"

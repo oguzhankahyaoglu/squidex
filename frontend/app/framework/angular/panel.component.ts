@@ -7,7 +7,7 @@
 
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Renderer2, SimpleChanges, ViewChild } from '@angular/core';
 
-import { slideRightAnimation } from '@app/framework/internal';
+import {fadeAnimation, slideRightAnimation} from '@app/framework/internal';
 
 import { PanelContainerDirective } from './panel-container.directive';
 
@@ -16,7 +16,7 @@ import { PanelContainerDirective } from './panel-container.directive';
     styleUrls: ['./panel.component.scss'],
     templateUrl: './panel.component.html',
     animations: [
-        slideRightAnimation
+        fadeAnimation
     ],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -33,6 +33,9 @@ export class PanelComponent implements AfterViewInit, OnChanges, OnDestroy, OnIn
 
     @Input()
     public desiredWidth = '10rem';
+
+    @Input()
+    public id = '';
 
     @Input()
     public minWidth?: string;

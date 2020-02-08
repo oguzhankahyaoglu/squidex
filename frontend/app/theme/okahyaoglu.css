@@ -1,15 +1,50 @@
-.navbar-dark .navbar-brand {
-    background-color: #192532 !important;
+.navbar.bg-primary .nav .nav-item .nav-link {
+    background-color: transparent !important;
 }
-.navbar.bg-primary{
-    background-color: #263545 !important;
+
+.support-button {
+    display: none !important;
 }
-.navbar.bg-primary .nav .nav-item .nav-link{
-    background-color: #263545 !important;
+
+.panel.panel-light .panel-main .panel-content {
+    background-color: white !important;
 }
-.support-button{
-    display:none !important;
+
+.navbar-dark .navbar-brand, .navbar.bg-primary {
+    background-color: #9c27b0 !important;
+    box-shadow: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12) !important;
 }
-.panel.panel-light .panel-main .panel-content{
-    background-color: white  !important;
+
+/*sol 1. menü */
+.sidebar {
+    background-color: rgb(38, 38, 38) !important;
+    border-right: none !important;;
+    box-shadow: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12) !important;
 }
+
+.sidebar .nav-link {
+    color: #f0f8ff !important;
+}
+
+.sidebar .nav-link {
+    background-color: rgb(38, 38, 38) !important;
+}
+
+.sidebar .nav-link.active {
+    background-color: rgb(47, 47, 47) !important;
+}
+
+
+.panel-dark, .panel-dark .panel-title {
+    color: white;
+}
+
+/*sol 2. menü */
+#left-menu-panel-wrapper .panel-content {
+    background-color: rgb(47, 47, 47) !important;
+}
+#left-menu-panel-wrapper .nav-link.active{background-color: rgb(38, 38, 38)  !important;}
+#left-menu-panel-wrapper .panel-header {
+    display: none !important;;
+}
+sqx-schema-category .nav-dark{background-color: transparent !important;;}
