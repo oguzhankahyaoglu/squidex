@@ -21,11 +21,9 @@ namespace Squidex.Config.Domain
     {
         public static void ConfigureForSquidex(this ILoggingBuilder builder, IConfiguration config)
         {
-            builder.ClearProviders();
-
             builder.AddConfiguration(config.GetSection("logging"));
 
-            // builder.AddSemanticLog();
+            builder.AddSemanticLog();
             builder.AddFilters();
 
             builder.Services.AddServices(config);

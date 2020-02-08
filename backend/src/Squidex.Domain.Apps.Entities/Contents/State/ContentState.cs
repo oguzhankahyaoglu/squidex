@@ -141,6 +141,11 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
                 Data = data;
             }
 
+            if (OrderNo == 0)
+            {
+                OrderNo = DateTime.Now.Ticks;
+            }
+
             if (dataDraft != null)
             {
                 DataDraft = dataDraft;

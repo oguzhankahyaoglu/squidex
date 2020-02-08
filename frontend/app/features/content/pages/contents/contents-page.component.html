@@ -106,8 +106,11 @@
 
                 <ng-container syncedContent>
                     <div class="table-container">
-                        <table class="table table-items table-fixed" [style.minWidth]="listFields | sqxContentListWidth" [sqxSyncWidth]="header">
-                            <tbody *ngFor="let content of contentsState.contents | async; trackBy: trackByContent"
+                        <table class="table table-items table-fixed" [style.minWidth]="listFields | sqxContentListWidth" [sqxSyncWidth]="header"
+                               cdkDropList
+                               (cdkDropListDropped)="onDrop($event)">
+                            <tbody *ngFor="let i = index; let content of contentsState.contents | async; trackBy: trackByContent"
+                                   cdkDrag
                                 [sqxContent]="content"
                                 (delete)="delete(content)"
                                 [selected]="isItemSelected(content)"

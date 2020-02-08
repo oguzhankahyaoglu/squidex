@@ -25,7 +25,7 @@ import {
     SchemasState,
     TableFields,
     TempService,
-    UIState
+    UIState, Version
 } from '@app/shared';
 
 import { DueTimeSelectorComponent } from './../../shared/due-time-selector.component';
@@ -195,6 +195,17 @@ export class ContentsPageComponent extends ResourceOwner implements OnInit {
 
     public trackByContent(index: number, content: ContentDto): string {
         return content.id;
+    }
+
+    public onDrop($event:any){
+        let items = (this.contentsState.snapshot as any).contents as Readonly<ContentDto[]>;
+
+        let data: { id: string; orderNo: Number; version:Version }[] = [];
+        let oldItem = items[$event.previousIndex];
+        let newItem = items[$event.currentIndex];
+        data.push({ id: oldItem.id, version: oldItem.version, orderNo: newItem.orderNo });
+        data.push({ id: newItem.id, version: newItem.version, orderNo: oldItem.orderNo });
+        this.contentsState.updateOrderNo(data).pipe(onErrorResumeNext()).subscribe();
     }
 
     private updateSelectionSummary() {

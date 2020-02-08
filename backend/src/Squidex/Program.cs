@@ -8,6 +8,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Squidex.Areas.IdentityServer.Config;
 using Squidex.Config.Domain;
 using Squidex.Config.Orleans;
@@ -27,6 +28,7 @@ namespace Squidex
                 .ConfigureLogging((context, builder) =>
                 {
                     builder.ConfigureForSquidex(context.Configuration);
+                    builder.AddConsole().AddDebug();
                 })
                 .ConfigureAppConfiguration((hostContext, builder) =>
                 {
