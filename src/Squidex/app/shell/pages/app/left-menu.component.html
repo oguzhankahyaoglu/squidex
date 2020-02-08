@@ -1,5 +1,5 @@
 <ul class="nav flex-column" *ngIf="appsState.selectedApp | async; let app">
-    <li class="nav-item" *ngIf="app.canReadSchemas">
+    <li class="nav-item" *ngIf="app.canCreateSchema">
         <a class="nav-link" routerLink="schemas" routerLinkActive="active">
             <i class="nav-icon icon-schemas"></i> <div class="nav-text">Schemas</div>
         </a>
@@ -14,17 +14,17 @@
             <i class="nav-icon icon-assets"></i> <div class="nav-text">Assets</div> 
         </a>
     </li>
-    <li class="nav-item" *ngIf="app.canReadRules">
+    <li class="nav-item" *ngIf="app.canCreateSchema && app.canReadRules">
         <a class="nav-link" routerLink="rules" routerLinkActive="active">
             <i class="nav-icon icon-rules"></i> <div class="nav-text">Rules</div>
         </a>
     </li>
-    <li class="nav-item">
+    <li class="nav-item" *ngIf="app.canCreateSchema">
         <a class="nav-link" routerLink="settings" routerLinkActive="active">
             <i class="nav-icon icon-settings"></i> <div class="nav-text">Settings</div>
         </a>
     </li>
-    <li class="nav-item" *ngIf="app.canAccessApi">
+    <li class="nav-item" *ngIf="app.canCreateSchema && app.canAccessApi">
         <a class="nav-link" routerLink="api" routerLinkActive="active">
             <i class="nav-icon icon-api"></i> <div class="nav-text">API</div>
         </a>
