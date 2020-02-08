@@ -1,6 +1,134 @@
 # Changelog
 
-## 3.4.0-beta1 - 2019-10-08
+## 4.1.0 RC - 2020-02-05
+
+### Features
+
+* **Assets**: Support for focus points in UI and API.
+* **Assets**: Integrated editor / cropper for basic image editing.
+* **Contents**: Better and more consistent content cleanup and enrichment.
+
+### Bugfixes
+
+* **API**: Faster equals checks.
+* **API**: Fixed a critical bug that caused an infinite loop and Out of Memory.
+* **API**: Many small bugfixes.
+
+## 4.1.0 Beta 1 - 2020-01-17
+
+### Features
+
+* **Assets**: Folders to organized your assets.
+* **Assets**: Asset metadata with built in editor in the management UI.
+* **Assets**: Better detection of asset type, including videos and extracting of more metadata.
+* **Assets**: Protect assets.
+* **Assets**: Amazon S3 support for assets.
+* **Assets**: Dedicated permission to upload new version of asset.
+* **GraphQL**: Flat data to provide content with default language rules.
+* **Logging**: Increased log levels and performance improvements.
+* **Logging**: Store request logs in MongoDB for fast download (also in hosted version).
+* **Geolocation**: Search by location in OpenStreetMap-Editor.
+* **Geolocation**: General UX approvements for Editor.
+* **Comments**: Mention other contributors by email address.
+* **Comments**: Notification when you get mentioned.
+* **Comments**: Markdown support.
+* **Comments**: Rule action to create comments for content items.
+* **Comments**: Trigger to handle notifications, for example to forward them to slack.
+* **References**: Tag editor for references.
+* **References**: Added button to open contents view in a new browser tab.
+* **UI**: Page size for contents view.
+* **UI**: Less forgiving markdown preview.
+* **UI**: Video support for rich text editor.
+* **UI**: Clearer link to API documentation.
+* **Strings**: StockImage editor with photes provided by Unsplash.
+* **Performance**: Performance improvements and reduced memory allocations.
+* **Performance**: Faster full text index.
+
+### Bugfixes
+
+* **Backups**: Fixed several minor bugs in backups and increased the test coverage.
+* **Infrastructure**: Fixed a bug when resetting plans (Cloud only).
+* **Infrastructure**: Fixed header handling when Squidex is hosted behind a proxy.
+* **Content**: Use proper MongoDB indices for default sorting.
+* **UI**: Fixed image positioning in Safari in content list.
+* **UI**: Fix for autosaving content.
+* **Translation**: Fix for deepl translation.
+* **Authentication**: Better logout.
+
+## 4.0.3 - 2019-11-18
+
+### Features
+
+* **Login**: Support for Microsoft TenantId. Thanks to [mhilgersom](https://github.com/mhilgersom)
+
+## 4.0.2 - 2019-11-18
+
+### Bugfixes
+
+* **API**: Fix parsing of OData queries with required fields.
+* **API**: Also add client to contributor index.
+* **API**: Fix Asset upload size limit.
+* **API**: Fixed required attribute for generated OpenAPI schema.
+* **UI**: Add scripts to schema export so that it does not get overwritten on sync.
+* **UI**: Field readonly fields in content lists.
+
+## 4.0.1 - 2019-11-14
+
+### Bugfixes
+
+* **UI**: Cancel button for new apps should not be disabled after submit.
+* **Schema**: Fixed synchronization for list fields and reference fields.
+
+## 4.0.0 - 2019-11-13
+
+### Breaking Changes
+
+#### List Fields
+
+This feature contains a major update how reference fields and list fields are managed. In previous versions, schema fields had the properties `IsListField` or `IsReferenceField` to indicate whether a field should be shown in content lists or not. This was hard to manage in the UI and you could not specify the order. With this release schemas contain list of field names that should be used as list fields or reference fields. List field names can also contain meta fields like the content id or the content author. But we have decided not to implement a migration for that. If you use the feature you have to configure these fields again. Please not that the API is not affected and it is very likely not a breaking change for your consuming applications.
+
+#### .NET Core 3.0
+
+Migration to .NET Core 3.0. This also includes some code changes such as cleanup of configuration and proper nullable support.
+
+This version does not use alpine image with self contained image any more. Therefore the final image is larger than before but the Squidex layer itself is smaller, which means a reduced disk size and download size when you update Squidex or when you have multiple versions installed or other .NET Core applications on your servers.
+
+#### Clustering
+
+This version introduces a new storage to communicate cluster members. Therefore it is recommended not to use a rolling deployment and restart the entire cluster instead.
+
+### Features
+
+* **UI**: New approach to manage list fields and schema fields.
+* **UI**: Many small UI / UX improvements.
+* **UI**: Improvements to the Geolocation editor.
+* **UI**: Improved dialog to connect a client.
+* **UI**: Improved Rule Wizard dialog.
+* **UI**: Integrated cluster monitoring UI.
+* **UI**: Improved schema UI.
+* **UI**: Confirm dialog before removing contributor.
+* **Workflows**: Restrict when a content item can be updated by setting an expression or roles.
+* **Workflows**: Define multiple roles for workflows.
+* **Rules**: Action to write comments.
+* **API**: Migration to .NET Core 3.0
+* **API**: Configuratiopn option to recreated the superadmin whe nyou loose the password.
+* **GraphQL**: Flat content structure.
+* **Clustering**: Clustering improvements.
+
+### Bugfixes
+
+* **UI**: Fixed the buttons to change the status of multiple contents.
+* **Rules**: Fixed saving of rule names.
+
+## 4.0.0 Beta 1 - 2019-10-27
+
+Migration to .NET Core 3.0. This also includes some code changes such as cleanup of configuration and proper nullable support.
+
+This version does not use alpine image with self contained image any more. Therefore the final image is larger than before but the Squidex layer itself is smaller, which means a reduced disk size and download size when you update Squidex or when you have multiple versions installed or other .NET Core applications on your servers.
+
+## 3.5.0 - 2019-10-26
+
+**NOTE**: This is the latest release with .NET Core 2.X. Next release will be 3.0 and above. Does not really matter when you use Docker.
 
 ### Features
 
@@ -11,16 +139,34 @@
 * **UI**: Hide date buttons based on settings.
 * **UI**: Updated several packages.
 * **UI**: Improvement to contributor page.
+* **UI**: Better error indicating when saving content.
+* **UI**: Warning when changing content status and you have pending changes.
+* **UI**: Markdown support for Alerts and Dialogs.
+* **UI**: Design improvements.
+* **UI**: Custom "Forbidden" page when users access a page he is not allowed to instead of automatic logout.
+* **UI**: Migration to angular CDK drag and drop to replace two drag and drop libraries.
+* **UI**: Collapse or expand all array items.
 * **Migration**: Better cancellation support for migration.
-* **Rules**: Custom payload for webhook and Algolia.
+* **Rules**: Custom payload for Webhook and Algolia action.
+* **Rules**: Optional names for rules when you have multiple rules with the same actions and triggers.
+* **Rules**: Basic statistic summary per rule.
+* **Rules**: Filter rule events by rule.
+* **Rules**: Added exception details for Algolia.
+* **Common**: New diacritic character for slug 
 
 ### Bugfixes
 
 * **UI**: Fix references dropdown in query UI for localized values.
 * **UI**: Fixed the unique checkbox in schema editor.
 * **UI**: Fixed default date handling.
+* **UI**: Fixed sorting of fields in schema synchronization endpoint.
+* **UI**: Fixed preview button when multiple preview targets where configured.
+* **UI**: Fixed TinymCE editor in arrays (Not recommended to use that!)
 * **App**: Fix plan settings.
+* **App**: Do not store default roles in the database so that we can change them later when new features are added.
 * **Logging**: Use explicit thread for logging to console.
+* **Logging**: Critical performance improvement.
+* **Rules**: Fixed discourse action.
 
 ## 3.3.0 - 2019-09-08
 

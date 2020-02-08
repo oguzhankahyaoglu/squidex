@@ -1,0 +1,79 @@
+<div class="table-items-row table-items-row-expandable"> 
+    <div class="table-items-row-summary">        
+        <div class="row">
+            <div class="col-5" [class.built]="role.isDefaultRole">
+                <span class="role-name">{{role.name}}</span>
+            </div>
+            <div class="col text-decent">
+                Clients: <span [class.text-force]="role.numClients > 0">{{role.numClients}}</span>
+            </div>
+            <div class="col text-decent">
+                Users: <span [class.text-force]="role.numContributors > 0">{{role.numContributors}}</span>
+            </div>
+            <div class="col-auto">
+                <div class="float-right">
+                    <button type="button" class="btn btn-secondary table-items-edit-button mr-1" [class.active]="isEditing" (click)="toggleEditing()">
+                        <i class="icon-settings"></i>
+                    </button>
+
+                    <button type="button" class="btn btn-text-danger"
+                        [disabled]="!role.canDelete"
+                        (sqxConfirmClick)="delete()"
+                        confirmTitle="Delete role" 
+                        confirmText="Do you really want to delete the role?">
+                        <i class="icon-bin2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-items-row-details" *ngIf="isEditing">
+        <form (ngSubmit)="save()">
+            <div class="table-items-row-details-tabs clearfix">
+                <div class="float-right">
+                    <button type="reset" class="btn btn-text-secondary2" (click)="toggleEditing()">Cancel</button>
+                    <button type="submit" class="btn btn-primary ml-1" *ngIf="isEditable">Save</button>
+                </div>
+            </div>
+
+            <div class="table-items-row-details-tab">
+                <ng-container *ngIf="!role.isDefaultRole; else defaultRole">
+                    <div class="form-group row no-gutters" *ngFor="let control of editForm.controls; let i = index">
+                        <div class="col">
+                            <sqx-control-errors [for]="control" [fieldName]="'Permission'" [submitted]="editForm.submitted | async"></sqx-control-errors>
+    
+                            <sqx-autocomplete [underlined]="true" [formControl]="control" [source]="allPermissions"></sqx-autocomplete>
+                        </div>
+                        <div class="col-auto pl-1" *ngIf="isEditable">
+                            <button type="button" class="btn btn-text-danger" (click)="removePermission(i)">
+                                <i class="icon-bin2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </ng-container>
+
+                <ng-template #defaultRole>
+                    <sqx-form-alert>
+                        {{descriptions[role.name]}}
+                    </sqx-form-alert>
+                    
+                    <div class="form-group" *ngFor="let control of editForm.controls">
+                       <input class="form-control form-underlined" [formControl]="control" />
+                    </div>
+                </ng-template>
+
+                <form class="form-group row no-gutters" [formGroup]="addPermissionForm.form" (ngSubmit)="addPermission()" *ngIf="isEditable">
+                    <div class="col">
+                        <sqx-autocomplete [autoFocus]="true" formControlName="permission" [source]="allPermissions" #addInput></sqx-autocomplete>
+                    </div>
+                    <div class="col-auto pl-1">
+                        <button type="submit" class="btn btn-success">
+                            <i class="icon-plus"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </form>
+    </div>
+</div>

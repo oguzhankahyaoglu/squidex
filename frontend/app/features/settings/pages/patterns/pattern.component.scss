@@ -1,0 +1,8 @@
+.col-options {
+    @include force-width(6rem);
+}
+
+.col-name,
+.col-message {
+    @include force-width(10rem);
+}
