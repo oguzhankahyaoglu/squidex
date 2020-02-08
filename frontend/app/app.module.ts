@@ -12,6 +12,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule } from '@angular/router';
+import { DndModule } from 'ng2-dnd';
 
 import { AppComponent } from './app.component';
 
@@ -73,6 +74,7 @@ export function configCurrency() {
 @NgModule({
     imports: [
         BrowserAnimationsModule,
+        DndModule.forRoot(),
         BrowserModule,
         CommonModule,
         FormsModule,

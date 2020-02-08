@@ -281,6 +281,29 @@ export abstract class ContentsStateBase extends State<Snapshot> {
             shareSubscribed(this.dialogs, { silent: true }));
     }
 
+    public updateOrderNo(data: { id: string; orderNo: Number; version:Version }[]): Observable<any> {
+        // return this.contentsService.updateOrderNo(this.appName, this.schemaName, data).pipe(
+        //     tap(dto => {
+        //         this.dialogs.notifyInfo('Orders updated successfully.');
+        //     }),
+        //     notify(this.dialogs));
+
+        return forkJoin(
+            data.map(c =>
+                this.contentsService.updateOrderNo(this.appName, this.schemaId, c.id, c.orderNo, c.version).pipe(
+                    catchError(error => of(error))))).pipe(
+            tap(results => {
+                const error = results.find(x => x instanceof ErrorDto);
+
+                if (error) {
+                    this.dialogs.notifyError(error);
+                }
+
+                return of(error);
+            }),
+            switchMap(() => this.loadInternalCore(false)));
+    }
+
     public proposeDraft(content: ContentDto, request: any): Observable<ContentDto> {
         return this.contentsService.proposeDraft(this.appName, content, request, content.version).pipe(
             tap(updated => {

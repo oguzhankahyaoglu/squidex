@@ -116,10 +116,12 @@ import {
     WorkflowsService,
     WorkflowsState
 } from './declarations';
+import {DndModule} from 'ng2-dnd';
 
 @NgModule({
     imports: [
         DragDropModule,
+        DndModule,
         MentionModule,
         RouterModule,
         SqxFrameworkModule

@@ -98,10 +98,6 @@
       "single"
     ],
     "radix": true,
-    "readonly-array": [
-      true,
-      "ignore-local"
-    ],
     "rxjs-collapse-imports": true,
     "rxjs-proper-imports": true,
     "semicolon": [
