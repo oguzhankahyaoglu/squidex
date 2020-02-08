@@ -1,0 +1,14 @@
+
+.content-status {
+    &.default {
+        color: $color-text-decent;
+    }
+
+    &.pending {
+        color: $color-dark-black;
+    }
+
+    &-label {
+        color: $color-text;
+    }
+}

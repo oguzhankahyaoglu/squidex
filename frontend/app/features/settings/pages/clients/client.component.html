@@ -1,0 +1,75 @@
+<div class="card">
+    <div class="card-header">
+        <div class="row no-gutters">
+            <div class="col col-name">
+                <sqx-editable-title 
+                    [name]="client.name"
+                    (nameChange)="rename($event)"
+                    [disabled]="!client.canUpdate">
+                </sqx-editable-title>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-primary" (click)="connectDialog.show()">Connect</button>
+            </div>
+            <div class="col-auto cell-actions no-padding">
+                <button type="button" class="btn btn-text-danger"
+                    [disabled]="!client.canRevoke"
+                    (sqxConfirmClick)="revoke()"
+                    confirmTitle="Revoke client" 
+                    confirmText="Do you really want to revoke the client?">
+                    <i class="icon-bin2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="container">
+            <div class="form-group row">
+                <label class="col-3 col-form-label">
+                    Client Id
+                </label>
+                <div class="col cell-input">
+                    <input readonly class="form-control" value="{{appsState.appName}}:{{client.id}}" #inputName />
+                </div>
+                <div class="col-auto cell-actions no-padding">
+                    <button type="button" class="btn btn-text" [sqxCopy]="inputName">
+                        <i class="icon-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label class="col-3 col-form-label">
+                    Client Secret
+                </label>
+                <div class="col cell-input">
+                    <input readonly class="form-control" [value]="client.secret" #inputSecret />
+                </div>
+                <div class="col-auto cell-actions no-padding">
+                    <button type="button" class="btn btn-text" [sqxCopy]="inputSecret">
+                        <i class="icon-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label class="col-3 col-form-label">
+                    Role
+                </label>
+                <div class="col cell-input">
+                    <select class="form-control"
+                        [disabled]="!client.canUpdate"
+                        [ngModel]="client.role"
+                        (ngModelChange)="update($event)">
+                        <option *ngFor="let role of clientRoles; trackBy: trackByRole" [ngValue]="role.name">{{role.name}}</option>
+                    </select>
+                </div>
+                <div class="col-auto cell-actions"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ng-container *sqxModal="connectDialog">
+    <sqx-client-connect-form [client]="client"
+        (complete)="connectDialog.hide()">
+    </sqx-client-connect-form>   
+</ng-container>

@@ -1,0 +1,82 @@
+﻿// ==========================================================================
+//  Squidex Headless CMS
+// ==========================================================================
+//  Copyright (c) Squidex UG (haftungsbeschraenkt)
+//  All rights reserved. Licensed under the MIT license.
+// ==========================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FakeItEasy;
+using NodaTime;
+using Squidex.Domain.Apps.Entities.Rules.Repositories;
+using Squidex.Infrastructure;
+using Squidex.Infrastructure.Caching;
+using Xunit;
+
+namespace Squidex.Domain.Apps.Entities.Rules.Queries
+{
+    public class RuleEnricherTests
+    {
+        private readonly IRuleEventRepository ruleEventRepository = A.Fake<IRuleEventRepository>();
+        private readonly IRequestCache requestCache = A.Fake<IRequestCache>();
+        private readonly NamedId<Guid> appId = NamedId.Of(Guid.NewGuid(), "my-app");
+        private readonly Context requestContext = Context.Anonymous();
+        private readonly RuleEnricher sut;
+
+        public RuleEnricherTests()
+        {
+            sut = new RuleEnricher(ruleEventRepository, requestCache);
+        }
+
+        [Fact]
+        public async Task Should_not_enrich_if_statistics_not_found()
+        {
+            var source = CreateRule();
+
+            var result = await sut.EnrichAsync(source, requestContext);
+
+            Assert.Equal(0, result.NumFailed);
+            Assert.Equal(0, result.NumSucceeded);
+
+            Assert.Null(result.LastExecuted);
+
+            A.CallTo(() => requestCache.AddDependency(source.Id, source.Version))
+                .MustHaveHappened();
+
+            A.CallTo(() => requestCache.AddDependency(null))
+                .MustNotHaveHappened();
+        }
+
+        [Fact]
+        public async Task Should_enrich_rules_with_found_statistics()
+        {
+            var source = CreateRule();
+
+            var stats = new RuleStatistics
+            {
+                RuleId = source.Id,
+                NumFailed = 12,
+                NumSucceeded = 17,
+                LastExecuted = SystemClock.Instance.GetCurrentInstant()
+            };
+
+            A.CallTo(() => ruleEventRepository.QueryStatisticsByAppAsync(appId.Id))
+                .Returns(new List<RuleStatistics> { stats });
+
+            var result = await sut.EnrichAsync(source, requestContext);
+
+            A.CallTo(() => requestCache.AddDependency(source.Id, source.Version))
+                .MustHaveHappened();
+
+            A.CallTo(() => requestCache.AddDependency(stats.LastExecuted))
+                .MustHaveHappened();
+        }
+
+        private RuleEntity CreateRule()
+        {
+            return new RuleEntity { AppId = appId, Id = Guid.NewGuid(), Version = 13 };
+        }
+    }
+}

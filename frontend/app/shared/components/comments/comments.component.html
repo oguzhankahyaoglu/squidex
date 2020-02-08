@@ -1,0 +1,32 @@
+<sqx-panel desiredWidth="20rem" isBlank="true" [isLazyLoaded]="false" grid="true">
+    <ng-container title>
+        Comments
+    </ng-container>
+
+    <ng-container content>
+        <div class="comments-list" #scrollMe [scrollTop]="scrollMe.scrollHeight">
+            <sqx-comment *ngFor="let comment of commentsState.comments | async; trackBy: trackByComment"
+                [comment]="comment"
+                [canDelete]="true"
+                [canFollow]="false"
+                (delete)="delete(comment)"
+                [userToken]="userToken">
+            </sqx-comment>
+        </div>
+        
+        <div class="comments-footer">
+            <form [formGroup]="commentForm.form" (ngSubmit)="comment()">
+                <input class="form-control" name="text" formControlName="text" placeholder="Create a comment" 
+                    [mention]="mentionUsers | async" 
+                    [mentionConfig]="mentionConfig"
+                    autocomplete="off" 
+                    autocorrect="off"
+                    autocapitalize="off" />
+            </form>
+        </div>
+    </ng-container>
+</sqx-panel>
+
+
+
+

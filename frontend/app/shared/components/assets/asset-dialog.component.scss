@@ -1,0 +1,41 @@
+.form-group {
+    position: relative;
+}
+
+.image {
+    & {
+        @include absolute(0, 0, 0, 0);
+    }
+
+    &-progress {
+        @include absolute(0, 0, null, 0);
+    }
+}
+
+.nav-link {
+    padding-bottom: 1.25rem;
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+.metadata {
+    margin: 1rem auto;
+    max-width: 500px;
+    min-width: 0;
+}
+
+.slug {
+    padding-right: 6rem;
+}
+
+.slug-generate {
+    & {
+        @include absolute(auto, 10px, 3px, auto);
+    }
+
+    &:focus {
+        box-shadow: none;
+    }
+}

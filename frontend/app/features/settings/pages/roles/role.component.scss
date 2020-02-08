@@ -1,0 +1,35 @@
+.form-group {
+    & {
+        margin-bottom: .375rem;
+    }
+
+    &:last-child {
+        margin: 0;
+    }
+}
+
+.prefix {
+    border: 0;
+    border-bottom: 1px solid $color-input;
+    color: $color-text-decent;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.rule-name {
+    @include truncate;
+}
+
+.text-force {
+    color: $color-text;
+}
+
+.built {
+    font-weight: bold;
+}
+
+.table-items-row-details {
+    &::before {
+        right: 4.55rem;
+    }
+}

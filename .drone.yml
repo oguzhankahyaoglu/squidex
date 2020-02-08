@@ -63,9 +63,9 @@ steps:
   - name: build_binaries
     image: docker
     commands:
-      - docker build -t squidex-build-image -f Dockerfile.build --build-arg SQUIDEX__VERSION=$${DRONE_TAG} .
+      - docker build -t squidex-build-image --build-arg SQUIDEX__VERSION=$${DRONE_TAG} .
       - docker create --name squidex-build-container squidex-build-image
-      - docker cp squidex-build-container:/out /build
+      - docker cp squidex-build-container:/app/. /build
     volumes:
       - name: build
         path: /build
@@ -80,7 +80,7 @@ steps:
   - name: binaries_zip
     image: kramos/alpine-zip
     commands:
-      -  cd /build/out && zip -r /release/binaries.zip .
+      -  cd /build && zip -r /release/binaries.zip .
     volumes:
       - name: build
         path: /build
@@ -130,19 +130,6 @@ steps:
         - success
       event:
         - tag
-
-  - name: cleanup
-    image: docker
-    commands:
-      - docker system prune -f
-    volumes:
-      - name: docker1
-        path: /var/run/docker.sock
-      - name: docker2
-        path: /var/lib/docker
-    when:
-      status:
-        - failure
       
 volumes:
   - name: build

@@ -1,0 +1,31 @@
+<form class="inner-form" [formGroup]="synchronizeForm.form" (submit)="synchronize()">
+    <div class="inner-header" *ngIf="isEditable">
+        <div class="row align-items-center">
+            <div class="col"></div>
+            <div class="col-auto">
+                <div class="form-inline">
+                    <div class="form-check pr-4">
+                        <input class="form-check-input" type="checkbox" id="fieldsDelete" formControlName="fieldsDelete" />
+                        <label class="form-check-label" for="fieldsDelete">
+                            Delete fields
+                        </label>
+                    </div>
+    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="fieldsRecreate" formControlName="fieldsRecreate" />
+                        <label class="form-check-label" for="fieldsRecreate">
+                            Recreate fields
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary" [disabled]="synchronizeForm.submitted | async">Synchronize</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="inner-main">
+        <sqx-json-editor [noBorder]="true" formControlName="json"></sqx-json-editor>
+    </div>
+</form>
