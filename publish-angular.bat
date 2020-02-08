@@ -1,2 +1,2 @@
-cd src/Squidex
+cd frontend
 npm run build
