@@ -65,6 +65,13 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
                 }
 
                 var schema = await GetSchemaAsync(value.AppId.Id, value.SchemaId.Id);
+                if (newVersion == 0)
+                {
+                    if (value.OrderNo == 0)
+                    {
+                        value.OrderNo = DateTime.Now.Ticks;
+                    }
+                }
 
                 var content = SimpleMapper.Map(value, new MongoContentEntity
                 {

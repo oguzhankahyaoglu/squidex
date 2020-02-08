@@ -77,6 +77,11 @@ namespace Squidex.Areas.Api.Controllers.Contents.Models
         public Instant LastModified { get; set; }
 
         /// <summary>
+        /// Orderno auto calculated
+        /// </summary>
+        public long OrderNo { get; set; }
+
+        /// <summary>
         /// The status of the content.
         /// </summary>
         public Status Status { get; set; }

@@ -31,6 +31,11 @@ export interface SavedQuery {
 
 const OLDEST_FIRST: Query = {
     sort: [
+        { path: 'lastModified', order: 'ascending' }
+    ]
+};
+const NEWEST_FIRST: Query = {
+    sort: [
         { path: 'lastModified', order: 'descending' }
     ]
 };
@@ -41,7 +46,8 @@ export class Queries {
     public queriesUser: Observable<ReadonlyArray<SavedQuery>>;
 
     public defaultQueries: ReadonlyArray<SavedQuery> = [
-        { name: 'All (newest first)' },
+        { name: 'All (by order no)' },
+        { name: 'All (newest first)', query: NEWEST_FIRST },
         { name: 'All (oldest first)', query: OLDEST_FIRST }
     ];
 

@@ -88,6 +88,10 @@ namespace Squidex.Domain.Apps.Entities.MongoDb.Contents
         public Instant LastModified { get; set; }
 
         [BsonRequired]
+        [BsonElement("on")]
+        public long OrderNo { get; set; }
+
+        [BsonRequired]
         [BsonElement("vs")]
         public long Version { get; set; }
 

@@ -62,7 +62,8 @@ namespace Squidex.Domain.Apps.Entities.Contents.Queries
 
                 if (result.Sort.Count == 0)
                 {
-                    result.Sort.Add(new SortNode(new List<string> { "lastModified" }, SortOrder.Descending));
+                    // changed default sorting by order no instead of lastModified so that ordering mechanism would work.
+                    result.Sort.Add(new SortNode(new List<string> { "orderNo" }, SortOrder.Descending));
                 }
 
                 if (result.Take == long.MaxValue)
@@ -176,6 +177,7 @@ namespace Squidex.Domain.Apps.Entities.Contents.Queries
             entityType.AddStructuralProperty(nameof(IContentEntity.Created).ToCamelCase(), EdmPrimitiveTypeKind.DateTimeOffset);
             entityType.AddStructuralProperty(nameof(IContentEntity.CreatedBy).ToCamelCase(), EdmPrimitiveTypeKind.String);
             entityType.AddStructuralProperty(nameof(IContentEntity.LastModified).ToCamelCase(), EdmPrimitiveTypeKind.DateTimeOffset);
+            entityType.AddStructuralProperty(nameof(IContentEntity.OrderNo).ToCamelCase(), EdmPrimitiveTypeKind.Int64);
             entityType.AddStructuralProperty(nameof(IContentEntity.LastModifiedBy).ToCamelCase(), EdmPrimitiveTypeKind.String);
             entityType.AddStructuralProperty(nameof(IContentEntity.Status).ToCamelCase(), EdmPrimitiveTypeKind.String);
             entityType.AddStructuralProperty(nameof(IContentEntity.Version).ToCamelCase(), EdmPrimitiveTypeKind.Int32);

@@ -117,6 +117,15 @@ namespace Squidex.Domain.Apps.Entities.Contents
                         return await UpdateAsync(c, x => c.Data, false, isProposal);
                     });
 
+                case UpdateContentOrderNo updateContentOrderNo:
+                    return UpdateReturnAsync(updateContentOrderNo, async c =>
+                    {
+                        //TODO bu niye burda var?
+                        // var ctx = await CreateContext(Snapshot.AppId.Id, Snapshot.SchemaId.Id, Snapshot.Id, () => "Failed to update sorting.");
+                        UpdateOrderNo(updateContentOrderNo, c.NewOrderNo);
+                        return Task.CompletedTask;
+                    });
+
                 case PatchContent patchContent:
                     return UpdateReturnAsync(patchContent, async c =>
                     {
@@ -257,6 +266,11 @@ namespace Squidex.Domain.Apps.Entities.Contents
             }
 
             return Snapshot;
+        }
+
+        public void UpdateOrderNo(UpdateContentOrderNo command, long orderNo)
+        {
+            RaiseEvent(SimpleMapper.Map(command, new ContentOrderChanged { NewOrderNo = orderNo }));
         }
 
         public void Create(CreateContent command, Status status)

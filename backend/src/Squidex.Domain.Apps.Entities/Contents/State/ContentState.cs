@@ -38,6 +38,9 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
         public bool IsPending { get; set; }
 
         [DataMember]
+        public long OrderNo { get; set; }
+
+        [DataMember]
         public bool IsDeleted { get; set; }
 
         [DataMember]
@@ -104,6 +107,12 @@ namespace Squidex.Domain.Apps.Entities.Contents.State
                     {
                         ScheduleJob = null;
 
+                        break;
+                    }
+
+                case ContentOrderChanged _e:
+                {
+                        OrderNo = _e.NewOrderNo;
                         break;
                     }
 

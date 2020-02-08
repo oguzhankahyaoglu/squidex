@@ -86,6 +86,9 @@
                                     <input type="checkbox" class="form-check" [ngModel]="selectedAll" (ngModelChange)="selectAll($event)" />
                                 </th>
                                 <th class="cell-actions cell-actions-left">
+                                    Sort
+                                </th>
+                                <th class="cell-actions cell-actions-left">
                                     Actions
                                 </th>
                                 <th *ngFor="let field of listFields" [sqxContentListCell]="field">

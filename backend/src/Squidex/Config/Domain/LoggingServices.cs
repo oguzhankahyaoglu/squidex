@@ -25,7 +25,7 @@ namespace Squidex.Config.Domain
 
             builder.AddConfiguration(config.GetSection("logging"));
 
-            builder.AddSemanticLog();
+            // builder.AddSemanticLog();
             builder.AddFilters();
 
             builder.Services.AddServices(config);

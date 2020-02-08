@@ -5,6 +5,7 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -40,7 +41,8 @@ namespace Squidex.Config.Web
             services.AddSingletonAs<RobotsTxtMiddleware>()
                 .AsSelf();
 
-            services.AddSingletonAs<EnforceHttpsMiddleware>()
+            if (!Debugger.IsAttached)
+                services.AddSingletonAs<EnforceHttpsMiddleware>()
                 .AsSelf();
 
             services.AddSingletonAs<LocalCacheMiddleware>()

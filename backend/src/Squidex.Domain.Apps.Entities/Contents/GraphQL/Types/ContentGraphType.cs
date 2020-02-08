@@ -72,6 +72,14 @@ namespace Squidex.Domain.Apps.Entities.Contents.GraphQL.Types
 
             AddField(new FieldType
             {
+                Name = "orderNo",
+                ResolvedType = AllTypes.NonNullInt,
+                Resolver = Resolve(x => x.OrderNo),
+                Description = "Auto-generated order no of content."
+            });
+
+            AddField(new FieldType
+            {
                 Name = "lastModifiedBy",
                 ResolvedType = AllTypes.NonNullString,
                 Resolver = Resolve(x => x.LastModifiedBy.ToString()),

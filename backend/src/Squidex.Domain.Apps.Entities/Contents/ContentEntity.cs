@@ -54,5 +54,6 @@ namespace Squidex.Domain.Apps.Entities.Contents
         public bool CanUpdate { get; set; }
 
         public bool IsPending { get; set; }
+        public long OrderNo { get; set; }
     }
 }

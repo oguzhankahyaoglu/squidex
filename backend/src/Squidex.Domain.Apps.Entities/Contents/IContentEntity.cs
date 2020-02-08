@@ -31,5 +31,7 @@ namespace Squidex.Domain.Apps.Entities.Contents
         NamedContentData DataDraft { get; }
 
         bool IsPending { get; }
+
+        long OrderNo { get; set; }
     }
 }

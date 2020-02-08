@@ -319,6 +319,35 @@ namespace Squidex.Areas.Api.Controllers.Contents
         }
 
         /// <summary>
+        /// updates orderno values of newly sorted items
+        /// </summary>
+        /// <param name="app">The name of the app.</param>
+        /// <param name="name">The name of the schema.</param>
+        /// <param name="id">The id of the content item to update.</param>
+        /// <param name="request">The full data for the content item.</param>
+        /// <param name="asDraft">Indicates whether the update is a proposal.</param>
+        /// <returns>
+        /// 200 => Content updated.
+        /// 404 => Content, schema or app not found.
+        /// 400 => Content data is not valid.
+        /// </returns>
+        /// <remarks>
+        /// You can read the generated documentation for your app at /api/content/{appName}/docs
+        /// </remarks>
+        [HttpPost]
+        [Route("content/{app}/{name}/updateOrderNo/{id}/{order}")]
+        [ApiPermission(Permissions.AppContentsUpdate)]
+        [ApiCosts(1)]
+        public async Task<IActionResult> UpdateOrderNo(string app, string name, Guid id, long order)
+        {
+            await contentQuery.GetSchemaOrThrowAsync(Context, name);
+
+            var command = new UpdateContentOrderNo { ContentId = id, NewOrderNo = order };
+            var context = await CommandBus.PublishAsync(command);
+            return Ok();
+        }
+
+        /// <summary>
         /// Patchs a content item.
         /// </summary>
         /// <param name="app">The name of the app.</param>
