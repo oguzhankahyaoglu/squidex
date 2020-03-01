@@ -8,8 +8,7 @@
     "angular-whitespace": false,
     "class-name": true,
     "comment-format": [
-      true,
-      "check-space"
+      true
     ],
     "component-class-suffix": true,
     "component-selector": [
@@ -56,7 +55,6 @@
     "no-construct": true,
     "no-debugger": true,
     "no-duplicate-variable": true,
-    "no-empty": true,
     "no-eval": true,
     "no-forward-ref": false,
     "no-inferrable-types": [
@@ -112,10 +110,6 @@
         "multiline": "never",
         "singleline": "never"
       }
-    ],
-    "triple-equals": [
-      true,
-      "allow-null-check"
     ],
     "typedef-whitespace": [
       false,

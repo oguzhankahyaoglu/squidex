@@ -382,7 +382,7 @@ export class SchemasState extends State<Snapshot> {
         }
     }
 
-    private get appName() {
+    public get appName() {
         return this.appsState.appName;
     }
 }

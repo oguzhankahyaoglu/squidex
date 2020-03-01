@@ -1,5 +1,5 @@
 <div #panel id="{{id}}">
-    <div class="panel panel-{{theme}}" [@slideRight]>
+    <div class="panel panel-{{theme}}">
         <ng-content select="[inner]" *ngIf="isFullSize"></ng-content>
 
         <div class="panel-header" [class.large]="showSecondHeader" *ngIf="!isFullSize">

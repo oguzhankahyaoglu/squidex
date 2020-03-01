@@ -2,7 +2,7 @@
 
 <sqx-panel desiredWidth="*" minWidth="50rem" showSidebar="true" grid="true">
     <ng-container title>
-        Contents
+        {{ schema?.displayName || "Contents"}}
     </ng-container>
 
     <ng-container menu>
@@ -15,7 +15,7 @@
                 </button>
             </div>
             <div class="col pl-1">
-                <sqx-search-form formClass="form" placeholder="Fulltext search"
+                <sqx-search-form formClass="form" placeholder="search..."
                     (queryChange)="search($event)"
                     [query]="contentsState.contentsQuery | async"
                     [queries]="queries"
@@ -31,19 +31,19 @@
                 <button type="button" class="btn btn-success" #newButton routerLink="new" title="New Content (CTRL + SHIFT + G)" [disabled]="(contentsState.canCreateAny | async) === false">
                     <i class="icon-plus"></i> New
                 </button>
-                
+
                 <sqx-shortcut keys="ctrl+shift+g" (trigger)="newButton.click()"></sqx-shortcut>
             </div>
         </div>
     </ng-container>
 
     <ng-container content>
-        <ng-container *ngIf="tableView.listFields | async; let listFields">    
+        <ng-container *ngIf="tableView.listFields | async; let listFields">
             <sqx-list-view [isLoading]="contentsState.isLoading | async" syncedHeader="true" table="true">
                 <ng-container topHeader>
                     <div class="selection" *ngIf="selectionCount > 0">
                         {{selectionCount}} items selected&nbsp;&nbsp;
-            
+
                         <button type="button" class="btn btn-outline-secondary btn-status mr-1" *ngFor="let status of nextStatuses | sqxKeys" (click)="changeSelectedStatus(status)">
                             <sqx-content-status
                                 [status]="status"
@@ -52,10 +52,10 @@
                                 small="true">
                             </sqx-content-status>
                         </button>
-                        
+
                         <button type="button" class="btn btn-danger" *ngIf="selectionCanDelete"
                             (sqxConfirmClick)="deleteSelected()"
-                            confirmTitle="Delete content" 
+                            confirmTitle="Delete content"
                             confirmText="Do you really want to delete the selected content items?">
                             Delete
                         </button>
@@ -131,7 +131,7 @@
                 </ng-container>
             </sqx-list-view>
         </ng-container>
-    </ng-container>    
+    </ng-container>
 
     <ng-container sidebar>
         <div class="panel-nav">
