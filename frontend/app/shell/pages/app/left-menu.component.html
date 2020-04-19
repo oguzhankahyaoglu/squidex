@@ -1,32 +1,55 @@
-<ul class="nav flex-column" *ngIf="appsState.selectedApp | async; let app">
+<!-- Image and text -->
+<nav class="navbar navbar-light bg-light" *ngIf="appsState.selectedApp | async; let app">
+    <a class="navbar-brand" href="#">
+        <img src="/docs/4.0/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">
+        Bootstrap
+    </a>
+    <a class="navbar-brand" href="#">
+        <img src="/docs/4.0/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">
+        Bootstrap
+    </a>
+    <a class="navbar-brand" href="#">
+        <img src="/docs/4.0/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">
+        Bootstrap
+    </a>
+    <a class="navbar-brand" href="#">
+        <img src="/docs/4.0/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">
+        Bootstrap
+    </a>
     <li class="nav-item" *ngIf="app.canCreateSchema">
-        <a class="nav-link" routerLink="schemas" routerLinkActive="active">
-            <i class="nav-icon icon-schemas"></i> <div class="nav-text">Schemas</div>
+        <a class="nav-link" [routerLink]='app.name + "/schemas"' routerLinkActive="active">
+            <i class="nav-icon icon-schemas"></i>
+            <div class="nav-text">Schemas</div>
         </a>
     </li>
     <li class="nav-item" *ngIf="app.canAccessContent">
-        <a class="nav-link" routerLink="content" routerLinkActive="active">
-            <i class="nav-icon icon-contents"></i> <div class="nav-text">Content</div>
+        <a class="nav-link" [routerLink]='app.name + "/content"' routerLinkActive="active">
+            <i class="nav-icon icon-contents"></i>
+            <div class="nav-text">Content</div>
         </a>
     </li>
     <li class="nav-item" *ngIf="app.canReadAssets">
-        <a class="nav-link" routerLink="assets/filters" routerLinkActive="active">
-            <i class="nav-icon icon-assets"></i> <div class="nav-text">Assets</div> 
+        <a class="nav-link" [routerLink]='app.name + "/assets/filters"' routerLinkActive="active">
+            <i class="nav-icon icon-assets"></i>
+            <div class="nav-text">Assets</div>
         </a>
     </li>
     <li class="nav-item" *ngIf="app.canCreateSchema && app.canReadRules">
-        <a class="nav-link" routerLink="rules" routerLinkActive="active">
-            <i class="nav-icon icon-rules"></i> <div class="nav-text">Rules</div>
+        <a class="nav-link" [routerLink]='app.name + "/rules"' routerLinkActive="active">
+            <i class="nav-icon icon-rules"></i>
+            <div class="nav-text">Rules</div>
         </a>
     </li>
     <li class="nav-item" *ngIf="app.canCreateSchema">
-        <a class="nav-link" routerLink="settings" routerLinkActive="active">
-            <i class="nav-icon icon-settings"></i> <div class="nav-text">Settings</div>
+        <a class="nav-link" [routerLink]='app.name + "/settings"' routerLinkActive="active">
+            <i class="nav-icon icon-settings"></i>
+            <div class="nav-text">Settings</div>
         </a>
     </li>
     <li class="nav-item" *ngIf="app.canCreateSchema && app.canAccessApi">
-        <a class="nav-link" routerLink="api" routerLinkActive="active">
-            <i class="nav-icon icon-api"></i> <div class="nav-text">API</div>
+        <a class="nav-link" [routerLink]='app.name + "/content"' routerLink="api" routerLinkActive="active">
+            <i class="nav-icon icon-api"></i>
+            <div class="nav-text">API</div>
         </a>
     </li>
-</ul>
+</nav>

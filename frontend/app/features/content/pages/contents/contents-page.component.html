@@ -88,7 +88,7 @@
                                 <th class="cell-actions cell-actions-left">
                                     Sort
                                 </th>
-                                <th class="cell-actions cell-actions-left">
+                                <th class="cell-actions cell-actions-edit cell-actions-left">
                                     Actions
                                 </th>
                                 <th *ngFor="let field of listFields" [sqxContentListCell]="field">
@@ -105,12 +105,12 @@
                 </ng-container>
 
                 <ng-container syncedContent>
-                    <div class="table-container">
+                    <div class="table-container" cdkDropListGroup>
                         <table class="table table-items table-fixed" [style.minWidth]="listFields | sqxContentListWidth" [sqxSyncWidth]="header"
                                cdkDropList
                                (cdkDropListDropped)="onDrop($event)">
                             <tbody *ngFor="let i = index; let content of contentsState.contents | async; trackBy: trackByContent"
-                                   cdkDrag
+                               cdkDrag cdkDragLockAxis="y"
                                 [sqxContent]="content"
                                 (delete)="delete(content)"
                                 [selected]="isItemSelected(content)"
